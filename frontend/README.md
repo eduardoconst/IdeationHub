@@ -1,54 +1,30 @@
-# React + TypeScript + Vite
+# Estrutura do Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Este documento descreve a estrutura de pastas do frontend do projeto IdeationHub.
 
-Currently, two official plugins are available:
+## Estrutura de Pastas
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+```plaintext
+frontend/
+|-- src/
+|   |-- components/   # Componentes reutilizáveis do React
+|   |-- pages/        # Páginas do aplicativo
+|   |-- assets/       # Recursos estáticos (imagens, fontes, etc.)
+|   |-- routes/       # Arquivos de roteamento do React
+|   |-- services/     # Chamadas de API e serviços
+|   |-- styles/       # Arquivos de estilização (CSS, temas, etc.)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Descrição das Pastas
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **components/**: Contém componentes reutilizáveis do React que podem ser usados em várias partes do aplicativo.
+- **pages/**: Contém as páginas principais do aplicativo.
+- **assets/**: Contém recursos estáticos como imagens, fontes e outros arquivos que não são código-fonte.
+- **routes/**: Contém os arquivos de roteamento do React, que definem como as páginas são acessadas.
+- **services/**: Contém funções e chamadas de API que interagem com o backend.
+- **styles/**: Contém arquivos de estilização, como CSS ou arquivos de configuração de temas.
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+### Observações
+
+- Certifique-se de seguir a estrutura de pastas para manter o código organizado e fácil de manter.
+- Adicione novas pastas conforme necessário para acomodar novos tipos de arquivos ou funcionalidades.
