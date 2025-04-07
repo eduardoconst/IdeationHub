@@ -5,6 +5,7 @@ const db = require('./config/db') // Importa o arquivo db.js
 app.db = db // Injeta o db dentro do app
 
 consign() // Inicia o consign
+    .then('./config/passport.js') // Inclui o arquivo passport.js
     .then('./config/middlewares.js') // Inclui o arquivo middlewares.js 
     .then('./api/validation.js') // Inclui o arquivo validation.js   
     .then('./api') // Inclui o arquivo user.js

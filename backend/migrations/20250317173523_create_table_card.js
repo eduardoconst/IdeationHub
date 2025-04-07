@@ -7,9 +7,10 @@ exports.up = function(knex) {
     table.increments('id').primary();
     table.string('title').notNull();
     table.string('content').notNull();
-    table.integer('userID').references('id').inTable('users').notNull();
     table.timestamp('voting_start').notNull(); // Data e hora de início da votação
     table.timestamp('voting_end').notNull();   // Data e hora de término da votação
+    table.varchar('status').defaultTo('active'); // Status do card (ativo ou inativo)
+    table.integer('userID').references('id').inTable('users').notNull(); 
   });
 };
 

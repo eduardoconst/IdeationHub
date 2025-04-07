@@ -43,7 +43,7 @@ module.exports = app => {
             // Verifica se a votação ainda está em andamento
             if (votingEnd > now) {
                 // Busca o usuário no banco de dados
-                const user = await app.db('users')
+                const user = await app.db('users')  
                     .select('id', 'admin')
                     .where({ id: req.user.id }) // `req.user.id` deve conter o ID do usuário autenticado
                     .first()
@@ -100,5 +100,56 @@ module.exports = app => {
             .catch(err => res.status(500).send(err))
     }
 
-    return { save, remove, get , getById } // Retorna as funções save, remove, get e getById
+    const close = async (req, res) => { // Função que encerra um card
+        try {
+            const card = await app.db('cards')
+                .where({ id: req.params.id })
+                .first();
+
+            existsOrError(card, 'Card não encontrado.');
+
+            const user = await app.db('users')
+                .select('id', 'admin')
+                .where({ id: req.user.id }) // `req.user.id` deve conter o ID do usuário autenticado
+                .first();
+
+            existsOrError(user, 'Usuário não encontrado.');
+
+            // Verifica se o usuário é o criador do card ou um administrador
+            if (user.id !== card.userID && !user.admin) {
+                return res.status(403).send('Você não tem permissão para encerrar este card.');
+            }
+
+            // Atualiza o status do card para "encerrado"
+            await app.db('cards')
+                .update({ status: 'encerrado' })
+                .where({ id: req.params.id });
+
+            res.status(200).send('Card encerrado com sucesso.');
+        } catch (msg) {
+            return res.status(400).send(msg);
+        }
+    };
+
+    const finalizeExpiredCards = async () => {
+        try {
+            const now = new Date();
+
+            // Busca os cards cuja data de término da votação já passou
+            const expiredCards = await app.db('cards')
+                .where('voting_end', '<', now)
+                .andWhere('status', '!=', 'encerrado');
+
+            for (const card of expiredCards) {
+                // Atualiza o status do card para "encerrado"
+                await app.db('cards')
+                    .update({ status: 'encerrado' })
+                    .where({ id: card.id });
+            }
+        } catch (err) {
+            console.error('Erro ao finalizar cards expirados:', err);
+        }
+    };
+
+    return { save, remove, get, getById, close, finalizeExpiredCards } // Retorna as funções save, remove, get, getById, close e finalizeExpiredCards
 }
