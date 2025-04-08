@@ -38,7 +38,8 @@ module.exports = app => {
                 cardID: vote.cardID,
                 userID: vote.userID,
                 vote: vote.vote,
-                anonymous: vote.anonymous || false, // Valor padrão caso não seja enviado
+                anonymous: vote.anonymous || false,
+                showVotes: vote.showVotes || false // Adicionar esta linha para salvar o campo showVotes
             });
     
             return res.status(200).send('Voto registrado com sucesso!');
@@ -51,23 +52,71 @@ module.exports = app => {
     // Buscar votos (com opção de filtrar por card)
     const get = async (req, res) => {
         try {
+            // Query principal para buscar os votos
             let query = app.db('votes')
                 .join('cards', 'cards.id', '=', 'votes.cardID')
+                .leftJoin('users', 'users.id', '=', 'votes.userID')
                 .select(
                     'votes.id',
                     'votes.cardID',
+                    'votes.userID',
                     'votes.vote',
-                    'votes.showVotes',
-                    'cards.title as cardTitle'
+                    'votes.anonymous',
+                    'cards.title as cardTitle',
+                    app.db.raw('CASE WHEN votes.anonymous = true THEN NULL ELSE users.name END as userName')
                 );
 
+            // Filtrar por cardID se fornecido na query
             if (req.query.cardID) {
                 query = query.where('votes.cardID', req.query.cardID);
             }
 
             const votes = await query;
-            return res.json(votes); // Retorna os votos em formato de lista
+            
+            // Calcular estatísticas
+            const totalVotes = votes.length;
+            const positiveVotes = votes.filter(v => v.vote === true).length;
+            const negativeVotes = votes.filter(v => v.vote === false).length;
+            
+            // Obter cards únicos nos resultados
+            const uniqueCards = [...new Set(votes.map(v => v.cardID))];
+            const cardsInfo = await Promise.all(
+                uniqueCards.map(async (cardID) => {
+                    const cardVotes = votes.filter(v => v.cardID === cardID);
+                    return {
+                        cardID,
+                        cardTitle: cardVotes[0]?.cardTitle || 'Desconhecido',
+                        totalVotes: cardVotes.length,
+                        positiveVotes: cardVotes.filter(v => v.vote === true).length,
+                        negativeVotes: cardVotes.filter(v => v.vote === false).length
+                    };
+                })
+            );
+            
+            // Formatar a resposta
+            const response = {
+                metadata: {
+                    totalVotes,
+                    positiveVotes,
+                    negativeVotes,
+                    percentagePositive: totalVotes > 0 ? (positiveVotes / totalVotes * 100).toFixed(1) + '%' : '0%',
+                    filterApplied: req.query.cardID ? `cardID=${req.query.cardID}` : 'none',
+                    cardsWithVotes: cardsInfo
+                },
+                votes: votes.map(v => ({
+                    id: v.id,
+                    cardID: v.cardID,
+                    cardTitle: v.cardTitle,
+                    userID: v.userID,
+                    userName: v.userName || 'Anônimo',
+                    vote: v.vote ? 'Positivo' : 'Negativo',
+                    anonymous: v.anonymous
+                }))
+            };
+
+            return res.json(response);
         } catch (err) {
+            console.error("Erro ao buscar votos:", err);
             return res.status(500).send(err);
         }
     };
@@ -85,27 +134,56 @@ module.exports = app => {
 
             return res.json(groupedVotes);
         } catch (err) {
+            console.error("Erro ao agrupar votos:", err);
             return res.status(500).send(err);
         }
     };
 
-    // Buscar apenas votos visíveis
+    // Buscar apenas votos visíveis (se a coluna showVotes existir)
     const getVisibleVotes = async (req, res) => {
         try {
-            const visibleVotes = await app.db('votes')
+            // Verificar se a coluna showVotes existe
+            const hasShowVotesColumn = await checkIfColumnExists('votes', 'showVotes');
+            
+            let visibleVotesQuery = app.db('votes')
                 .join('cards', 'cards.id', '=', 'votes.cardID')
                 .select(
                     'votes.id',
                     'votes.cardID',
                     'votes.vote',
-                    'votes.showVotes',
+                    'votes.anonymous',
                     'cards.title as cardTitle'
-                )
-                .where('votes.showVotes', true);
+                );
+                
+            // Só aplicar o filtro se a coluna existir
+            if (hasShowVotesColumn) {
+                visibleVotesQuery = visibleVotesQuery.where('votes.showVotes', true);
+            }
 
+            const visibleVotes = await visibleVotesQuery;
             return res.json(visibleVotes);
         } catch (err) {
+            console.error("Erro ao buscar votos visíveis:", err);
             return res.status(500).send(err);
+        }
+    };
+    
+    // Função auxiliar para verificar se uma coluna existe
+    const checkIfColumnExists = async (tableName, columnName) => {
+        try {
+            // Consulta a information_schema para verificar se a coluna existe
+            const result = await app.db
+                .select('column_name')
+                .from('information_schema.columns')
+                .where({
+                    table_name: tableName,
+                    column_name: columnName
+                });
+            
+            return result.length > 0;
+        } catch (error) {
+            console.error(`Erro ao verificar se a coluna ${columnName} existe:`, error);
+            return false;
         }
     };
 
