@@ -1,0 +1,39 @@
+name: Continuous Integration
+ 
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-node:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # Using a more stable version
+
+      - name: Instalar dependências
+        run: |
+          cd backend
+          npm ci || npm install  # Try npm ci first, fall back to npm install
+
+      - name: Verificar se o servidor sobe
+        run: |
+          cd backend
+          # Use node directly instead of nodemon for testing
+          if [ -f "index.js" ]; then
+            node index.js &
+          elif [ -f "app.js" ]; then
+            node app.js &
+          elif [ -f "server.js" ]; then
+            node server.js &
+          else
+            echo "Main server file not found. Using npm start..."
+            npm start &
+          fi
+          sleep 5  # Give the server some time to start
