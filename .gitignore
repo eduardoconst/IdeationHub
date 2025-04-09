@@ -1,0 +1,56 @@
+# ─────────────────────────────
+# 📁 BACKEND
+# ─────────────────────────────
+
+# MacOS system file
+backend/.DS_Store
+
+# Node dependencies
+backend/node_modules/
+
+# Env files
+backend/.env
+
+
+# ─────────────────────────────
+# 📁 FRONTEND
+# ─────────────────────────────
+
+# Logs
+frontend/logs
+frontend/*.log
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+frontend/lerna-debug.log*
+
+# Node dependencies
+frontend/node_modules/
+
+# Build output
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# IDE/editor files
+frontend/.vscode/*
+!frontend/.vscode/extensions.json
+frontend/.idea
+frontend/.DS_Store
+frontend/*.suo
+frontend/*.ntvs*
+frontend/*.njsproj
+frontend/*.sln
+frontend/*.sw?
+
+# ─────────────────────────────
+# Geral (opcional)
+# ─────────────────────────────
+
+# Ignore OS files
+.DS_Store
+
+# Logs em qualquer lugar
+*.log
+npm-debug.log*
