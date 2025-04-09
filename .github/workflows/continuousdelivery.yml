@@ -1,24 +1,39 @@
 name: Continuous Delivery
- 
+
 on:
   push:
     branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
 
 jobs:
-  check-node:
+  deliver:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Simulando o continuos delivery
+      - name: Compactar projeto
+        run: |
+          zip -r projeto-entregavel.zip backend frontend README.md
+
+      - name: Enviar artefato
         uses: actions/upload-artifact@v4
         with:
-          name: projetozipado.zip
-          path: |
-            backend/**
-            frontend/**
-            README.md
-            
-            
+          name: projeto-entregavel
+          path: projeto-entregavel.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: deliver
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v3
+        with:
+          name: projeto-entregavel
+
+      - name: Descompactar artefato
+        run: unzip projeto-entregavel.zip
+
+      - name: Simulando o deploy
+        run: echo "Deploy realizado com sucesso!"

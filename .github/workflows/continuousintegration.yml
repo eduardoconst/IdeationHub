@@ -1,5 +1,5 @@
 name: Continuous Integration
- 
+
 on:
   pull_request:
     branches: [ main ]
@@ -15,17 +15,26 @@ jobs:
       - name: Instalar Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'  # Using a more stable version
+          node-version: '18'
 
       - name: Instalar dependências
         run: |
           cd backend
-          npm ci || npm install  # Try npm ci first, fall back to npm install
+          npm ci || npm install
+
+      - name: Verificar lint (opcional)
+        run: |
+          cd backend
+          npm run lint || echo "Lint não configurado ainda."
+
+      # - name: Rodar testes (opcional)
+      #   run: |
+      #     cd backend
+      #     npm test
 
       - name: Verificar se o servidor sobe
         run: |
           cd backend
-          # Use node directly instead of nodemon for testing
           if [ -f "index.js" ]; then
             node index.js &
           elif [ -f "app.js" ]; then
@@ -33,7 +42,7 @@ jobs:
           elif [ -f "server.js" ]; then
             node server.js &
           else
-            echo "Main server file not found. Using npm start..."
+            echo "Main server file not found. Usando npm start..."
             npm start &
           fi
-          sleep 5  # Give the server some time to start
+          sleep 5
