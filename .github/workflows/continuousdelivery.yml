@@ -1,4 +1,4 @@
-name: CDelivery- Backend
+name: Continuous Delivery
  
 on:
   push:
