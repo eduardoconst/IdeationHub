@@ -27,13 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: deliver
     steps:
-      # - name: Baixar artefato
-      #   uses: actions/download-artifact@v3
-      #   with:
-      #     name: projeto-entregavel
-
-      # - name: Descompactar artefato
-      #   run: unzip projeto-entregavel.zip
+      - name: Baixar artefato
+        uses: actions/download-artifact@v3
+        with:
+          name: projeto-entregavel
+          run: ls -R
 
       - name: Simulando o deploy
         run: echo "Deploy realizado com sucesso!"
