@@ -3,8 +3,8 @@ name: Continuous Delivery
 on:
   push:
     branches: [ main ]
-  # pull_request:
-  #   branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   deliver:
@@ -15,7 +15,7 @@ jobs:
 
       - name: Compactar projeto
         run: |
-          zip -r projeto-entregavel backend frontend README.md
+          zip -r projeto-entregavel.zip backend frontend README.md
 
       - name: Enviar artefato
         uses: actions/upload-artifact@v4
@@ -28,10 +28,15 @@ jobs:
     needs: deliver
     steps:
       - name: Baixar artefato
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: projeto-entregavel
-          # run: ls -R
+
+      - name: Ver arquivos baixados (debug)
+        run: ls -R
+
+      - name: Descompactar projeto
+        run: unzip projeto-entregavel.zip
 
       - name: Simulando o deploy
         run: echo "Deploy realizado com sucesso!"
