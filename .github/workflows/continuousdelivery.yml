@@ -31,7 +31,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: projeto-entregavel
-          run: ls -R
+          # run: ls -R
 
       - name: Simulando o deploy
         run: echo "Deploy realizado com sucesso!"
