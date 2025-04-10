@@ -15,7 +15,7 @@ jobs:
 
       - name: Compactar projeto
         run: |
-          zip -r projeto-entregavel.zip backend frontend README.md
+          zip -r projeto-entregavel backend frontend README.md
 
       - name: Enviar artefato
         uses: actions/upload-artifact@v4
