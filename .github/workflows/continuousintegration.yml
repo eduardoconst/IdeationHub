@@ -27,12 +27,8 @@ jobs:
           cd backend
           npm run lint || echo "Lint não configurado ainda."
 
-      # - name: Rodar testes (opcional)
-      #   run: |
-      #     cd backend
-      #     npm test
-
       - name: Verificar se o servidor sobe
+    
         run: |
           cd backend
           if [ -f "index.js" ]; then
@@ -46,3 +42,17 @@ jobs:
             npm start &
           fi
           sleep 5
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+  
+      - name: Build da imagem Docker
+        run: |
+          cd backend
+          docker build -t meu-backend .
+  

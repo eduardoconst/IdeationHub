@@ -40,3 +40,29 @@ jobs:
 
       - name: Simulando o deploy
         run: echo "Deploy realizado com sucesso!"
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
+        
+      - name: Build da imagem Docker
+        run: |
+          cd backend
+          docker build -t ideationhub-backend .
+        
+      - name: Rodar o container Docker
+        run: |
+          cd backend
+          docker run -d -p 4000:4000 --name ideationhub-backend ideationhub-backend       
+          
+      - name: Verificar se o container está rodando
+        run: |
+          if [ "$(docker ps -q -f name=ideationhub-backend)" ]; then
+            echo "Container está rodando."
+          else
+            echo "Container não está rodando."
+            exit 1
+          fi
