@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
+ 
 jobs:
   deliver:
     runs-on: ubuntu-latest
@@ -64,6 +64,8 @@ jobs:
 
       - name: Verificar se o container está rodando
         run: |
-          sleep 5
+          sleep 10
+          docker ps -a
+          docker logs meu-container-backend
           docker ps | grep meu-container-backend || (echo "Container não está rodando" && exit 1)
           curl -f http://localhost:4000 || (echo "Aplicação não respondeu na porta 4000" && exit 1)
