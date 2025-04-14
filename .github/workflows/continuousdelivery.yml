@@ -40,24 +40,30 @@ jobs:
 
       - name: Simulando o deploy
         run: echo "Deploy realizado com sucesso!"
+        
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Listar arquivos no diretório atual
+        run: ls -la
+
+      - name: Navegar até o diretório backend
+        run: cd backend
+
       - name: Build da imagem Docker
         run: |
           cd backend
-          docker build -t ideationhub-backend .
-        
+          docker build -t meu-backend .
+
       - name: Rodar o container Docker
         run: |
-          cd backend
-          docker run -d -p 4000:4000 --name ideationhub-backend ideationhub-backend       
-          
+          docker run -d -p 4000:4000 --name meu-container-backend meu-backend
+
       - name: Verificar se o container está rodando
         run: |
-          if [ "$(docker ps -q -f name=ideationhub-backend)" ]; then
-            echo "Container está rodando."
-          else
-            echo "Container não está rodando."
-            exit 1
-          fi
+          sleep 5
+          docker ps | grep meu-container-backend || (echo "Container não está rodando" && exit 1)
+          curl -f http://localhost:4000 || (echo "Aplicação não respondeu na porta 4000" && exit 1)
