@@ -51,7 +51,7 @@ jobs:
 
       - name: Listar arquivos no diretório atual
         run: ls -la
-
+        
       - name: Build da imagem Docker
         run: |
           cd backend
