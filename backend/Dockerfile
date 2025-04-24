@@ -20,4 +20,4 @@ COPY . .
 EXPOSE 4000
 
 # Comando para iniciar a aplicação
-CMD ["npm", "start", "--port", "4000"]
+CMD ["npm", "start", "--port", "4000"] 
