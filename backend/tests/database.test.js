@@ -16,4 +16,4 @@ describe('Teste de Conexão com o Banco de Dados', () => {
     const result = await db.raw('SELECT 1+1 AS result');
     expect(result).toBeDefined(); // Garante que respondeu
   });
-});
+}); 
