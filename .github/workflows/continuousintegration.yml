@@ -32,7 +32,7 @@ jobs:
           cd backend
           if [ -f "index.js" ]; then
             node index.js &
-          elif [ -f "app.js" ]; then 
+          elif [ -f "app.js" ]; then
             node app.js &
           elif [ -f "server.js" ]; then
             node server.js &
@@ -43,12 +43,18 @@ jobs:
           sleep 5
 
   testes:
-      runs-on: ubuntu-latest
-      steps:
-        - name: Rodar os testes
-          run: |
-            cd backend
-            npm test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Listar arquivos no diretório atual
+        run: ls -la  
+
+      - name: Rodar os testes
+        run: |
+          cd backend
+          npm test
 
   docker:
     runs-on: ubuntu-latest
