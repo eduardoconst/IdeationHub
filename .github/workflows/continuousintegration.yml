@@ -48,6 +48,11 @@ jobs:
       - name: Checkout do código
         uses: actions/checkout@v4
 
+      - name: Instalar dependências
+        run: |
+          cd backend
+          npm ci || npm install
+
       - name: Listar arquivos no diretório atual
         run: ls -la  
 
