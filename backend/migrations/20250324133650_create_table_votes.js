@@ -9,6 +9,7 @@ exports.up = function(knex) {
       table.integer('userID').references('id').inTable('users').notNull().onDelete('CASCADE'); // Relaciona o voto ao usuário
       table.boolean('vote').notNull(); // `true` para "sim", `false` para "não"
       table.boolean('anonymous').defaultTo(false); // Indica se o voto é anônimo
+      table.boolean('showVotes').defaultTo(false); // Adiciona a coluna showVotes
       table.timestamp('created_at').defaultTo(knex.fn.now()); // Data e hora do voto
     });
   };

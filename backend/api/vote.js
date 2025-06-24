@@ -8,14 +8,13 @@ module.exports = app => {
     
         try {
             console.log("Dados recebidos:", vote); // Verificar os dados enviados no POST
-    
+
             // Validações
             existsOrError(vote.cardID, 'ID do card não informado');
             existsOrError(vote.userID, 'ID do usuário não informado');
-            existsOrError(vote.vote, 'Voto não informado');
-    
+            // Corrigir validação do campo vote:
             if (typeof vote.vote !== 'boolean') {
-                throw 'O voto deve ser booleano (true/false)';
+                throw 'Voto não informado ou inválido';
             }
     
             vote.showVotes = vote.showVotes || false;
@@ -189,3 +188,4 @@ module.exports = app => {
 
     return { save, get, getGroupedByCard, getVisibleVotes };
 };
+
