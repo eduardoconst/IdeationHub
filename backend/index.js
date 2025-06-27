@@ -1,12 +1,10 @@
 const app = require('express')() // Importa o express pra dentro da variável app
 const consign = require('consign') // Importa o consign pra dentro da variável consign
 const db = require('./config/db') // Importa o arquivo db.js
-const mongoose = require('mongoose') // Importa o mongoose pra dentro da variável mongoose
 
-require('./config/mongodb') // Importa o arquivo mongodb.js
 
 app.db = db // Injeta o db dentro do app
-app.mongoose = mongoose // Injeta o mongoose dentro do app
+
 
 consign() // Inicia o consign
     .then('./config/passport.js') // Inclui o arquivo passport.js

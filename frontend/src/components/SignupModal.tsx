@@ -1,29 +1,6 @@
-/**
- * RESUMO: SignupModal.tsx
- * 
- * O que faz:
- * - Modal de cadastro de novos usuários
- * - Formulário completo com validação avançada
- * - Confirmação de senha e validação de email
- * - Gerencia múltiplos estados de erro por campo
- * - Aceite de termos de serviço obrigatório
- * 
- * Principais funções:
- * - handleSubmit(): Processa cadastro do usuário
- * - handleChange(): Atualiza campos e limpa erros
- * - validateForm(): Validação completa dos campos
- * - useState para: formData, isLoading, errors
- * 
- * Validações implementadas:
- * - Nome obrigatório (mínimo de caracteres)
- * - Email válido (regex)
- * - Senha mínima de 6 caracteres
- * - Confirmação de senha deve coincidir
- * - Checkbox de termos obrigatório
- * - Feedback visual de erros por campo
- */
-
 import { useState } from 'react';
+import { signup, SignupData } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -32,6 +9,7 @@ interface SignupModalProps {
 }
 
 const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => {
+  const { login: loginUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -77,22 +55,60 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({}); // Limpa erros anteriores
     
-    // TODO: Implementar lógica de cadastro
-    console.log('Signup:', formData);
-    
-    // Simular delay de API
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Chama o serviço de cadastro
+      const userData: SignupData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword
+      };
+
+      const response = await signup(userData);
+        // Sucesso! Usuário foi cadastrado
+      console.log('Usuário cadastrado com sucesso:', response);
+      
+      // Atualiza o contexto global (faz login automático após cadastro)
+      loginUser(response);
+      
+      // Limpa o formulário
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+      
+      // Fecha o modal
       onClose();
-    }, 1000);
+      
+      // Aqui você pode adicionar uma notificação de sucesso
+      // alert('Conta criada com sucesso! Bem-vindo(a)!');
+      
+    } catch (error: any) {
+      // Trata erros vindos do backend
+      console.error('Erro no cadastro:', error);
+      
+      // Se o erro é específico de um campo
+      if (error.message.includes('e-mail')) {
+        setErrors({ email: error.message });
+      } else if (error.message.includes('senha')) {
+        setErrors({ password: error.message });
+      } else {
+        // Erro geral
+        setErrors({ general: error.message });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -113,10 +129,15 @@ const SignupModal = ({ isOpen, onClose, onSwitchToLogin }: SignupModalProps) => 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-        </div>
-
-        {/* Form */}
+        </div>        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Erro geral */}
+          {errors.general && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{errors.general}</p>
+            </div>
+          )}
+
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

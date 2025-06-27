@@ -15,6 +15,10 @@ module.exports = app => {
         const users = { ...req.body } // Recebe os dados do corpo da requisição
         if(req.params.id) users.id = req.params.id // Se houver um id na requisição, ele é atribuído ao objeto users
 
+        if(!req.originalUrl.startsWith('/users')) users.admin = false // Se a URL original não começar com /users, o usuário não é admin
+        if(!req.user || !req.user.admin) users.admin = false // Se não houver um usuário logado ou se o usuário não for admin, o usuário não é admin
+            
+
         try{
             existsOrError(users.name, 'Nome não informado') 
             existsOrError(users.email, 'E-mail não informado') 
@@ -39,6 +43,7 @@ module.exports = app => {
             app.db('users') // Atualiza o usuário
                 .update(users) 
                 .where({ id: users.id })
+                .whereNull('deleted_at') // Busca apenas usuários que não foram excluídos
                 .then(_ => res.status(204).send()) // Se a atualização for bem sucedida, retorna status 204
                 .catch(err => res.status(500).send(err)) // Se houver erro, retorna status 500
         } else { // Se não houver um id no objeto users
@@ -53,6 +58,7 @@ module.exports = app => {
     const get = (req, res) => { 
         app.db('users') 
             .select('id', 'name', 'email', 'admin') 
+            .whereNull('deleted_at') // Busca apenas usuários que não foram excluídos
             .then(users => res.json(users)) 
             .catch(err => res.status(500).send(err)) 
     }  
@@ -62,11 +68,39 @@ module.exports = app => {
         app.db('users')
             .select('id', 'name', 'email', 'admin')
             .where({ id: req.params.id })
+            .whereNull('deleted_at') // Busca apenas usuários que não foram excluídos
             .first()
             .then(user => res.json(user))
             .catch(err => res.status(500).send(err))
     }
 
+
+    const remove = async (req, res) => { 
+        try{
+            // Busca os cartões do usuário que ainda estão com votação em aberto
+            const activeCards = await app.db('cards') 
+                .where({ userID: req.params.id })
+                .where('voting_end', '>', new Date()) // Verifica se a data de término da votação é maior que agora
+                .andWhere('status', 'active') // Verifica se o status do card está ativo
+            
+            if(activeCards && activeCards.length > 0) {
+                return res.status(400).send('Usuário possui cards com votação ainda em aberto')
+            }
+
+            const rowsDeleted = await app.db('users') // Exclui o usuário
+                .update({ deleted_at: new Date() }) // Define a data de exclusão
+                .where({ id: req.params.id }) // Filtra pelo id do usuário
+                .whereNull('deleted_at') // Garante que o usuário não foi excluído anteriormente
+            
+            existsOrError(rowsDeleted, 'Usuário não foi encontrado') // Verifica se o usuário foi encontrado
+
+            res.status(204).send() // Retorna status 204 se a exclusão for bem sucedida
+        } catch(msg) {
+            return res.status(400).send(msg) // Retorna status 400 se houver erro
+        }
+    }
+
+
     // Retorna as funções save e get
-    return { save, get , getById } 
+    return { save, get , getById , remove } 
 }

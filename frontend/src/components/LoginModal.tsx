@@ -1,53 +1,58 @@
-/**
- * RESUMO: LoginModal.tsx
- * 
- * O que faz:
- * - Modal de autenticação de usuário
- * - Formulário de login com validação
- * - Gerencia estado de carregamento durante login
- * - Permite alternância para tela de cadastro
- * - Design responsivo e acessível
- * 
- * Principais funções:
- * - handleSubmit(): Processa envio do formulário de login
- * - useState para gerenciar: email, password, isLoading
- * - onSwitchToSignup(): Callback para trocar para modal de cadastro
- * - onClose(): Callback para fechar modal
- * 
- * Funcionalidades:
- * - Validação HTML5 (required, email)
- * - Estado de loading com spinner animado
- * - Link "Esqueceu a senha?" (placeholder)
- * - Botão para alternar para cadastro
- * - Overlay com backdrop blur
- * - Suporte ao modo escuro
- */
 
 import { useState } from 'react';
+import { login, LoginData } from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToSignup: () => void;
+  onLoginSuccess?: (user: any) => void; // Callback para quando login for bem-sucedido
 }
 
-const LoginModal = ({ isOpen, onClose, onSwitchToSignup }: LoginModalProps) => {
+const LoginModal = ({ isOpen, onClose, onSwitchToSignup, onLoginSuccess }: LoginModalProps) => {
+  const { login: loginUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
+  const [error, setError] = useState('');
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(''); // Limpa erros anteriores
     
-    // TODO: Implementar lógica de login
-    console.log('Login:', { email, password });
-    
-    // Simular delay de API
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Chama o serviço de login
+      const credentials: LoginData = {
+        email,
+        password
+      };
+
+      const response = await login(credentials);
+        // Sucesso! Usuário foi autenticado
+      console.log('Login realizado com sucesso:', response);
+      
+      // Atualiza o contexto global
+      loginUser(response);
+      
+      // Limpa o formulário
+      setEmail('');
+      setPassword('');
+      
+      // Chama callback de sucesso (para atualizar estado no componente pai)
+      if (onLoginSuccess) {
+        onLoginSuccess(response);
+      }
+      
+      // Fecha o modal
       onClose();
-    }, 1000);
+        } catch (error: any) {
+      // Trata erros vindos do backend
+      console.error('Erro no login:', error);
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -68,10 +73,15 @@ const LoginModal = ({ isOpen, onClose, onSwitchToSignup }: LoginModalProps) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-        </div>
-
-        {/* Form */}
+        </div>        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Erro geral */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

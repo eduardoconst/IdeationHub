@@ -18,6 +18,7 @@ module.exports = app => {
         .all(app.config.passport.authenticate()) // autentica o token
         .put(admin(app.api.user.save))
         .get(admin(app.api.user.getById))
+        .delete(admin(app.api.user.remove)) // apenas admin pode remover usuarios
 
 // rotas de card
     app.route('/cards')
