@@ -1,37 +1,15 @@
-/**
- * RESUMO: CreateIdeaModal.tsx
- * 
- * O que faz:
- * - Modal para criação de novas ideias
- * - Formulário completo com preview em tempo real
- * - Validação de campos obrigatórios
- * - Seleção de duração da votação (1h a 1 semana)
- * - Contadores de caracteres para título e descrição
- * 
- * Principais funções:
- * - handleSubmit(): Cria nova ideia e chama callback
- * - handleChange(): Atualiza campos e limpa erros
- * - validateForm(): Valida título, descrição e duração
- * - onSubmit prop: Callback para quando ideia é criada
- * 
- * Funcionalidades especiais:
- * - Preview em tempo real da ideia sendo criada
- * - Limites de caracteres (título: 100, descrição: 500)
- * - Dropdown com opções pré-definidas de duração
- * - Validação de comprimento mínimo dos textos
- * - Reset automático do formulário após envio
- * - Design consistente com outros modais
- */
-
 import { useState } from 'react';
+import { createCard } from '../services/cardService';
+import { useAuth } from '../context/AuthContext';
 
 interface CreateIdeaModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (idea: { title: string; description: string; duration: number }) => void;
+  onSubmit?: () => void; // Simplificar callback
 }
 
 const CreateIdeaModal = ({ isOpen, onClose, onSubmit }: CreateIdeaModalProps) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -81,21 +59,41 @@ const CreateIdeaModal = ({ isOpen, onClose, onSubmit }: CreateIdeaModalProps) =>
     
     if (!validateForm()) return;
 
-    setIsLoading(true);
-    
-    // TODO: Implementar lógica de criação
-    console.log('Nova ideia:', formData);
-    
-    if (onSubmit) {
-      onSubmit(formData);
+    if (!user) {
+      setErrors({ general: 'Você precisa estar logado para criar uma ideia' });
+      return;
     }
+
+    setIsLoading(true);
+    setErrors({});
     
-    // Simular delay de API
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Calcular datas de início e fim da votação
+      const now = new Date();
+      const voting_start = now.toISOString();
+      const voting_end = new Date(now.getTime() + formData.duration * 60 * 60 * 1000).toISOString();
+
+      await createCard({
+        title: formData.title,
+        content: formData.description,
+        userID: user.id,
+        voting_start,
+        voting_end
+      });
+
+      // Reset form and close modal
       setFormData({ title: '', description: '', duration: 24 });
+      
+      if (onSubmit) {
+        onSubmit(); // Notifica que card foi criado
+      }
+      
       onClose();
-    }, 1000);
+    } catch (error: any) {
+      setErrors({ general: error.message });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const durationOptions = [
@@ -127,6 +125,13 @@ const CreateIdeaModal = ({ isOpen, onClose, onSubmit }: CreateIdeaModalProps) =>
             </svg>
           </button>
         </div>
+
+        {/* Error Message */}
+        {errors.general && (
+          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-sm text-red-800 dark:text-red-200">{errors.general}</p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-5">

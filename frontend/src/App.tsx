@@ -4,13 +4,16 @@ import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal';
 import SignupModal from './components/SignupModal';
 import CreateIdeaModal from './components/CreateIdeaModal';
+import SettingsModal from './components/SettingsModal';
 import { AuthProvider } from './context/AuthContext';
+import { useUserPreferences } from './hooks/useUserPreferences';
 
 function App() {
-  const [darkMode, setDarkMode] = useState(false);
+  const { preferences, toggleDarkMode } = useUserPreferences();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showCreateIdeaModal, setShowCreateIdeaModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const handleSwitchToSignup = () => {
     setShowLoginModal(false);
@@ -26,21 +29,23 @@ function App() {
     setShowLoginModal(false);
     setShowSignupModal(false);
     setShowCreateIdeaModal(false);
+    setShowSettingsModal(false);
   };
 
   return (
     <AuthProvider>
-      <div className={darkMode ? 'dark' : ''}>
+      <div className={preferences.darkMode ? 'dark' : ''}>
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white transition-colors">
           <Navbar 
-            darkMode={darkMode}
-            onToggleDarkMode={() => setDarkMode(!darkMode)}
+            darkMode={preferences.darkMode}
+            onToggleDarkMode={toggleDarkMode}
             onOpenLogin={() => setShowLoginModal(true)}
             onOpenCreateIdea={() => setShowCreateIdeaModal(true)}
+            onOpenSettings={() => setShowSettingsModal(true)}
           />
           
           <main className="max-w-4xl mx-auto px-4 py-6">
-            <Home />
+            <Home onOpenLogin={() => setShowLoginModal(true)} />
           </main>
 
           {/* Modals */}
@@ -62,10 +67,15 @@ function App() {
           <CreateIdeaModal 
             isOpen={showCreateIdeaModal}
             onClose={closeAllModals}
-            onSubmit={(idea) => {
-              console.log('Nova ideia criada:', idea);
-              // TODO: Adicionar ideia à lista
+            onSubmit={() => {
+              // Recarregar página para mostrar nova ideia
+              window.location.reload();
             }}
+          />
+
+          <SettingsModal 
+            isOpen={showSettingsModal}
+            onClose={closeAllModals}
           />
         </div>
       </div>

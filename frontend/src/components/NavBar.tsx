@@ -7,9 +7,10 @@ interface NavbarProps {
   onToggleDarkMode: () => void;
   onOpenLogin: () => void;
   onOpenCreateIdea: () => void;
+  onOpenSettings?: () => void;
 }
 
-const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea }: NavbarProps) => {
+const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea, onOpenSettings }: NavbarProps) => {
   const { user, isLoggedIn, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -64,16 +65,18 @@ const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea }: N
 
           {/* Right side buttons */}
           <div className="flex items-center space-x-4">
-            {/* Create Idea Button */}
-            <button
-              onClick={onOpenCreateIdea}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span className="hidden sm:inline">Nova Ideia</span>
-            </button>
+            {/* Create Idea Button - Só aparece se logado */}
+            {isLoggedIn && (
+              <button
+                onClick={onOpenCreateIdea}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="hidden sm:inline">Nova Ideia</span>
+              </button>
+            )}
 
             {/* Dark Mode Toggle */}
 
@@ -174,7 +177,9 @@ const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea }: N
                         <button
                           onClick={() => {
                             setShowDropdown(false);
-                            console.log('Abrir configurações');
+                            if (onOpenSettings) {
+                              onOpenSettings();
+                            }
                           }}
                           className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                         >

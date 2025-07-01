@@ -1,12 +1,4 @@
-/**
- * RESUMO: AuthContext.tsx
- * 
- * Context para gerenciar o estado de autenticação global
- * - Controla se usuário está logado
- * - Armazena dados do usuário atual
- * - Fornece funções de login/logout
- * - Persiste estado no localStorage
- */
+
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { UserResponse, isAuthenticated, getCurrentUser, logout } from '../services/authService';
@@ -41,15 +33,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // Verifica se há usuário logado ao carregar a página
   useEffect(() => {
     const checkAuth = async () => {
+      console.log('🔍 Verificando autenticação...');
+      
       if (isAuthenticated()) {
+        console.log('✅ Token encontrado, validando com backend...');
         try {
           const userData = await getCurrentUser();
+          console.log('✅ Usuário validado:', userData);
           setUser(userData);
         } catch (error) {
-          console.error('Erro ao verificar autenticação:', error);
+          console.error('❌ Erro ao verificar autenticação:', error);
           // Se houve erro, limpa tudo
           handleLogout();
         }
+      } else {
+        console.log('❌ Nenhum token encontrado');
       }
       setIsLoading(false);
     };

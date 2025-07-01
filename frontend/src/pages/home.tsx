@@ -3,101 +3,144 @@
  * 
  * O que faz:
  * - Página principal da aplicação IdeationHub
- * - Lista todas as ideias disponíveis para votação
+ * - Lista todas as ideias do banco de dados
  * - Sistema completo de filtros e ordenação
  * - Dashboard com estatísticas em tempo real
- * - Gerencia votação local das ideias
+ * - Gerencia votação real integrada com backend
  * 
  * Principais funções:
- * - handleVote(): Processa votos e atualiza estado local
+ * - loadCards(): Busca cards do backend
+ * - handleVote(): Processa votos e atualiza no backend
  * - Sistema de filtros: 'all', 'trending', 'recent'
  * - Sistema de ordenação: por votos, tempo ou recência
- * - Cálculo dinâmico de estatísticas (total ideias, votos)
- * 
- * Seções da página:
- * - Header: Título e descrição da plataforma
- * - Stats: Cards com estatísticas (ideias, votos, participantes)
- * - Filters: Botões de filtro e dropdown de ordenação
- * - Ideas List: Lista de cards de ideias filtradas/ordenadas
- * - Empty State: Mensagem quando não há ideias para exibir
- * 
- * Estados gerenciados:
- * - ideas: Array de ideias com votos atualizados
- * - filter: Filtro ativo atual
- * - sortBy: Critério de ordenação ativo
+ * - Cálculo dinâmico de estatísticas vindas do banco
  */
 
-// O que faz:
-// Gerencia o estado do tema (dark/light)
-// Renderiza o header com título e botão de tema
-// Renderiza o componente Home no main
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import IdeaCard from '../components/IdeaCard';
+import { getCards, Card } from '../services/cardService';
+import { useAuth } from '../context/AuthContext';
+import useLocalStorage from '../hooks/useLocalStorage';
 
-const initialIdeas = [
-  {
-    id: 1,
-    title: 'Sistema de Gamificação',
-    description: 'Implementar um sistema de pontos e badges para engajar mais os usuários na plataforma. Incluiria rankings, conquistas e recompensas por participação ativa.',
-    timeLeft: '23:45:30',
-    votes: { yes: 15, no: 3 },
-  },
-  {
-    id: 2,
-    title: 'Modo Noturno Automático',
-    description: 'Adicionar um modo escuro que se ativa automaticamente baseado no horário local do usuário ou nas configurações do sistema operacional.',
-    timeLeft: '18:20:15',
-    votes: { yes: 8, no: 2 },
-  },
-  {
-    id: 3,
-    title: 'Notificações Push',
-    description: 'Sistema de notificações para avisar sobre novas ideias, resultados de votações e atualizações importantes da plataforma.',
-    timeLeft: '47:30:00',
-    votes: { yes: 12, no: 7 },
-  }
-];
+interface HomeProps {
+  onOpenLogin?: () => void;
+}
 
-const Home = () => {
-  const [ideas, setIdeas] = useState(initialIdeas);
-  const [filter, setFilter] = useState<'all' | 'trending' | 'recent'>('all');
-  const [sortBy, setSortBy] = useState<'votes' | 'time' | 'recent'>('votes');
+const Home = ({ onOpenLogin }: HomeProps) => {
+  const { isLoggedIn } = useAuth();
+  const [ideas, setIdeas] = useState<Card[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Usa localStorage para persistir filtros e ordenação
+  const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent'>('homeFilter', 'all');
+  const [sortBy, setSortBy] = useLocalStorage<'votes' | 'time' | 'recent'>('homeSortBy', 'recent');
 
-  const handleVote = (id: number, type: 'yes' | 'no') => {
-    setIdeas(prevIdeas =>
-      prevIdeas.map(idea =>
-        idea.id === id
-          ? {
-              ...idea,
-              votes: {
-                ...idea.votes,
-                [type]: idea.votes[type] + 1
-              }
-            }
+  // Carregar cards do backend
+  useEffect(() => {
+    // Sempre carrega cards, independente do estado de login
+    loadCards();
+  }, []); // Remove isLoggedIn da dependência para sempre carregar
+
+  const loadCards = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      console.log('🔄 Carregando cards do backend...');
+      const cardsData = await getCards();
+      console.log('✅ Cards carregados:', cardsData);
+      
+      // Para cada card, vamos simular os votos (até implementarmos a contagem real)
+      const cardsWithVotes = cardsData.map(card => ({
+        ...card,
+        votes: card.votes || { yes: 0, no: 0 }
+      }));
+      
+      setIdeas(cardsWithVotes);
+    } catch (err: any) {
+      console.error('❌ Erro ao carregar cards:', err);
+      
+      // Tratamento específico de erros
+      if (err.message.includes('Network Error')) {
+        setError('Erro de conexão. Verifique se o backend está rodando.');
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVoteUpdate = (cardId: number, newVotes: { yes: number; no: number }) => {
+    setIdeas(prevIdeas => 
+      prevIdeas.map(idea => 
+        idea.id === cardId 
+          ? { ...idea, votes: newVotes }
           : idea
       )
     );
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-64">
+        <div className="text-center">
+          <svg className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p className="text-gray-600 dark:text-gray-400">Carregando ideias...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md mx-auto">
+          <h3 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">
+            Erro ao carregar ideias
+          </h3>
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
+          <button
+            onClick={loadCards}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const filteredIdeas = ideas.filter(idea => {
     if (filter === 'trending') {
-      return (idea.votes.yes + idea.votes.no) > 10;
+      const totalVotes = (idea.votes?.yes || 0) + (idea.votes?.no || 0);
+      return totalVotes > 5; // Ideias com mais de 5 votos
     }
     if (filter === 'recent') {
-      return idea.id > 2; // Simulando ideias recentes
+      const now = new Date();
+      const startDate = new Date(idea.voting_start);
+      const daysDiff = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+      return daysDiff <= 7; // Ideias dos últimos 7 dias
     }
     return true;
   });
 
   const sortedIdeas = [...filteredIdeas].sort((a, b) => {
     if (sortBy === 'votes') {
-      return (b.votes.yes + b.votes.no) - (a.votes.yes + a.votes.no);
+      const aVotes = (a.votes?.yes || 0) + (a.votes?.no || 0);
+      const bVotes = (b.votes?.yes || 0) + (b.votes?.no || 0);
+      return bVotes - aVotes;
     }
     if (sortBy === 'time') {
-      return a.timeLeft.localeCompare(b.timeLeft);
+      return new Date(a.voting_end).getTime() - new Date(b.voting_end).getTime();
     }
-    return b.id - a.id; // recent
+    return new Date(b.voting_start).getTime() - new Date(a.voting_start).getTime(); // recent
   });
 
   return (
@@ -138,7 +181,7 @@ const Home = () => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Votos Positivos</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {ideas.reduce((acc, idea) => acc + idea.votes.yes, 0)}
+                {ideas.reduce((acc, idea) => acc + (idea.votes?.yes || 0), 0)}
               </p>
             </div>
           </div>
@@ -158,6 +201,35 @@ const Home = () => {
           </div>
         </div>
       </div>
+
+      {/* Aviso para usuários não logados */}
+      {!isLoggedIn && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                Você está navegando como visitante. 
+                <button
+                  onClick={() => {
+                    if (onOpenLogin) {
+                      onOpenLogin();
+                    }
+                  }}
+                  className="font-medium underline hover:no-underline ml-1"
+                >
+                  Faça login
+                </button>
+                {' '}para votar e criar suas próprias ideias.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -198,7 +270,7 @@ const Home = () => {
       {/* Ideas List */}
       <div className="space-y-4">
         {sortedIdeas.map((idea) => (
-          <IdeaCard key={idea.id} idea={idea} onVote={handleVote} />
+          <IdeaCard key={idea.id} idea={idea} onVoteUpdate={handleVoteUpdate} />
         ))}
       </div>
 

@@ -1,0 +1,117 @@
+import api from './api';
+
+// Interface para dados do card
+export interface Card {
+  id: number;
+  title: string;
+  content: string;
+  userName: string;
+  userID: number;
+  voting_start: string;
+  voting_end: string;
+  status?: string;
+  votes?: {
+    yes: number;
+    no: number;
+  };
+}
+
+// Interface para criar novo card
+export interface CreateCardData {
+  title: string;
+  content: string;
+  userID: number;
+  voting_start: string;
+  voting_end: string;
+}
+
+// Interface para votar
+export interface VoteData {
+  cardID: number;
+  userID: number;
+  vote: boolean; 
+  anonymous?: boolean;
+  showVotes?: boolean;
+}
+
+
+export const getCards = async (): Promise<Card[]> => {
+  try {
+    const response = await api.get('/cards');
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar cards:', error);
+    throw new Error('Erro ao carregar ideias. Tente novamente.');
+  }
+};
+
+
+export const getCardById = async (id: number): Promise<Card> => {
+  try {
+    const response = await api.get(`/cards/${id}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar card:', error);
+    throw new Error('Erro ao carregar ideia. Tente novamente.');
+  }
+};
+
+/**
+ * Cria um novo card
+ */
+export const createCard = async (cardData: CreateCardData): Promise<void> => {
+  try {
+    await api.post('/cards', cardData);
+  } catch (error: any) {
+    console.error('Erro ao criar card:', error);
+    if (error.response?.data) {
+      throw new Error(error.response.data);
+    }
+    throw new Error('Erro ao criar ideia. Tente novamente.');
+  }
+};
+
+/**
+ * Deleta um card
+ */
+export const deleteCard = async (id: number): Promise<void> => {
+  try {
+    await api.delete(`/cards/${id}`);
+  } catch (error: any) {
+    console.error('Erro ao deletar card:', error);
+    if (error.response?.data) {
+      throw new Error(error.response.data);
+    }
+    throw new Error('Erro ao deletar ideia. Tente novamente.');
+  }
+};
+
+/**
+ * Vota em um card
+ */
+export const voteCard = async (voteData: VoteData): Promise<void> => {
+  try {
+    await api.post('/votes', voteData);
+  } catch (error: any) {
+    console.error('Erro ao votar:', error);
+    if (error.response?.data) {
+      throw new Error(error.response.data);
+    }
+    throw new Error('Erro ao registrar voto. Tente novamente.');
+  }
+};
+
+/**
+ * Busca votos de um card específico
+ */
+export const getCardVotes = async (cardId: number): Promise<{ yes: number; no: number }> => {
+  try {
+    // Esta rota pode não existir ainda no backend, mas vamos criar a estrutura
+    const response = await api.get(`/votes/card/${cardId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar votos:', error);
+    // Retorna zeros se não conseguir buscar
+    return { yes: 0, no: 0 };
+  }
+};

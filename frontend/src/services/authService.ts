@@ -81,7 +81,6 @@ export const login = async (credentials: LoginData): Promise<UserResponse> => {
  */
 export const logout = () => {
   localStorage.removeItem('token');
-  window.location.href = '/';
 };
 
 /**
@@ -97,11 +96,40 @@ export const isAuthenticated = (): boolean => {
  */
 export const getCurrentUser = async (): Promise<UserResponse | null> => {
   try {
-    if (!isAuthenticated()) return null;
+    if (!isAuthenticated()) {
+      console.log('❌ Não autenticado - sem token');
+      return null;
+    }
     
-    const response = await api.get('/user/current');
-    return response.data;
+    console.log('🔍 Validando token com backend...');
+    
+    // Usar uma rota protegida que já valida o token no header
+    // Como não temos /users/me, vamos usar validateToken corretamente
+    const token = localStorage.getItem('token');
+    console.log('🔑 Token:', token?.substring(0, 20) + '...');
+    
+    const response = await api.post('/validateToken', { token });
+    console.log('📡 Resposta validateToken:', response.data);
+    
+    // Se validateToken retorna true, precisamos decodificar o token para obter os dados
+    if (response.data === true) {
+      console.log('✅ Token válido, decodificando...');
+      // Decodificar token JWT para obter dados do usuário
+      const payload = JSON.parse(atob(token!.split('.')[1]));
+      console.log('👤 Dados do usuário:', payload);
+      
+      return {
+        id: payload.id,
+        name: payload.name,
+        email: payload.email,
+        admin: payload.admin
+      };
+    }
+    
+    console.log('❌ Token inválido');
+    throw new Error('Token inválido');
   } catch (error) {
+    console.error('❌ Erro ao validar token:', error);
     logout(); // Remove token inválido
     return null;
   }

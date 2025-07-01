@@ -22,16 +22,14 @@ module.exports = app => {
 
 // rotas de card
     app.route('/cards')
-        .all(app.config.passport.authenticate()) // autentica o token
-        .post(app.api.card.save) 
-        .get(app.api.card.get) 
+        .post(app.config.passport.authenticate(), app.api.card.save) // requer autenticação para criar
+        .get(app.api.card.get) // público para listar cards
 
     
     app.route('/cards/:id')
-        .all(app.config.passport.authenticate()) // autentica o token 
-        .put(admin(app.api.card.save)) 
-        .delete(admin(app.api.card.remove)) 
-        .get(app.api.card.getById) 
+        .put(app.config.passport.authenticate(), admin(app.api.card.save)) // requer auth + admin para editar
+        .delete(app.config.passport.authenticate(), admin(app.api.card.remove)) // requer auth + admin para deletar
+        .get(app.api.card.getById) // público para visualizar card específico 
 
 // rotas de votos
     app.route('/votes') 

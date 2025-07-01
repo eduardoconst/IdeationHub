@@ -1,58 +1,94 @@
-/**
- * RESUMO: IdeaCard.tsx
- * 
- * O que faz:
- * - Exibe um card de ideia individual no estilo Twitter/X
- * - Mostra informações da ideia (título, descrição, tempo restante)
- * - Permite votação com botões interativos (sim/não)
- * - Calcula e exibe porcentagem de aprovação
- * - Suporte completo ao modo escuro/claro
- * 
- * Principais funções:
- * - handleVote(): Processa cliques nos botões de voto
- * - Recebe props: idea (dados) e onVote (callback para votação)
- * - Interface IdeaProps: Define tipos TypeScript para as props
- * - Visual responsivo e moderno com hover effects
- * 
- * Componentes visuais:
- * - Avatar do usuário (placeholder)
- * - Área de conteúdo (título + descrição)
- * - Badge de tempo restante
- * - Botões de ação (voto sim, voto não, compartilhar)
- * - Estatísticas de aprovação
- */
+
+
+import { useState } from 'react';
+import { Card, voteCard } from '../services/cardService';
+import { useAuth } from '../context/AuthContext';
 
 interface IdeaProps {
-  idea: {
-    id: number;
-    title: string;
-    description: string;
-    timeLeft: string;
-    votes: {
-      yes: number;
-      no: number;
-    };
-  };
-  onVote?: (id: number, type: 'yes' | 'no') => void;
+  idea: Card;
+  onVoteUpdate?: (cardId: number, newVotes: { yes: number; no: number }) => void;
 }
 
-const IdeaCard = ({ idea, onVote }: IdeaProps) => {
-  const handleVote = (type: 'yes' | 'no') => {
-    if (onVote) {
-      onVote(idea.id, type);
+const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
+  const { user, isLoggedIn } = useAuth();
+  const [isVoting, setIsVoting] = useState(false);
+  const [userVote, setUserVote] = useState<boolean | null>(null);
+
+  // Calcula tempo restante
+  const calculateTimeLeft = () => {
+    const now = new Date();
+    const endDate = new Date(idea.voting_end);
+    const timeDiff = endDate.getTime() - now.getTime();
+    
+    if (timeDiff <= 0) {
+      return 'Votação encerrada';
+    }
+    
+    const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
+  const handleVote = async (type: 'yes' | 'no') => {
+    if (!isLoggedIn || !user) {
+      alert('Você precisa estar logado para votar! Faça login e tente novamente.');
+      return;
+    }
+
+    if (isVoting) return; // Previne duplo clique
+
+    setIsVoting(true);
+    
+    try {
+      const voteValue = type === 'yes';
+      
+      await voteCard({
+        cardID: idea.id,
+        vote: voteValue,
+        userID: user.id,
+        anonymous: false,
+        showVotes: true
+      });
+
+      // Atualiza o estado local
+      setUserVote(voteValue);
+      
+      // Atualiza os votos no componente pai
+      const currentVotes = idea.votes || { yes: 0, no: 0 };
+      const newVotes = {
+        yes: type === 'yes' ? currentVotes.yes + 1 : currentVotes.yes,
+        no: type === 'no' ? currentVotes.no + 1 : currentVotes.no
+      };
+      
+      if (onVoteUpdate) {
+        onVoteUpdate(idea.id, newVotes);
+      }
+      
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setIsVoting(false);
     }
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 p-6 mb-4">
-      {/* Header with user info placeholder */}
+      {/* Header with user info */}
       <div className="flex items-center mb-3">
         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
-          U
+          {idea.userName?.charAt(0)?.toUpperCase() || 'U'}
         </div>
         <div className="ml-3">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Usuário</span>
-          <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">• há 2h</span>
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            {idea.userName || 'Usuário'}
+          </span>
+          <span className="text-sm text-gray-500 dark:text-gray-400 ml-2">
+            • {new Date(idea.voting_start).toLocaleDateString('pt-BR')}
+          </span>
         </div>
       </div>
 
@@ -62,14 +98,18 @@ const IdeaCard = ({ idea, onVote }: IdeaProps) => {
           {idea.title}
         </h2>
         <p className="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
-          {idea.description}
+          {idea.content}
         </p>
       </div>
 
       {/* Timer */}
       <div className="flex items-center mb-4">
-        <div className="bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300 px-3 py-1 rounded-full text-xs font-medium">
-          ⏰ {idea.timeLeft} restante
+        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          calculateTimeLeft() === 'Votação encerrada' 
+            ? 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'
+            : 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300'
+        }`}>
+          ⏰ {calculateTimeLeft()}
         </div>
       </div>
 
@@ -79,23 +119,39 @@ const IdeaCard = ({ idea, onVote }: IdeaProps) => {
           {/* Vote Yes */}
           <button
             onClick={() => handleVote('yes')}
-            className="flex items-center space-x-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 px-3 py-2 rounded-lg transition-colors duration-200 group"
+            disabled={isVoting || calculateTimeLeft() === 'Votação encerrada'}
+            title={!isLoggedIn ? 'Faça login para votar' : 'Votar SIM'}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors duration-200 group ${
+              userVote === true 
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                : isLoggedIn 
+                  ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                  : 'text-gray-400 dark:text-gray-500 cursor-help'
+            } ${isVoting || calculateTimeLeft() === 'Votação encerrada' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5 8.293 7.207a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0z" clipRule="evenodd" />
             </svg>
-            <span className="text-sm font-medium">{idea.votes.yes}</span>
+            <span className="text-sm font-medium">{idea.votes?.yes || 0}</span>
           </button>
 
           {/* Vote No */}
           <button
             onClick={() => handleVote('no')}
-            className="flex items-center space-x-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg transition-colors duration-200 group"
+            disabled={isVoting || calculateTimeLeft() === 'Votação encerrada'}
+            title={!isLoggedIn ? 'Faça login para votar' : 'Votar NÃO'}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors duration-200 group ${
+              userVote === false 
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                : isLoggedIn 
+                  ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                  : 'text-gray-400 dark:text-gray-500 cursor-help'
+            } ${isVoting || calculateTimeLeft() === 'Votação encerrada' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
             </svg>
-            <span className="text-sm font-medium">{idea.votes.no}</span>
+            <span className="text-sm font-medium">{idea.votes?.no || 0}</span>
           </button>
 
           {/* Share placeholder */}
@@ -108,7 +164,13 @@ const IdeaCard = ({ idea, onVote }: IdeaProps) => {
 
         {/* Vote percentage */}
         <div className="text-xs text-gray-500 dark:text-gray-400">
-          {Math.round((idea.votes.yes / (idea.votes.yes + idea.votes.no)) * 100) || 0}% aprovação
+          {(() => {
+            const yes = idea.votes?.yes || 0;
+            const no = idea.votes?.no || 0;
+            const total = yes + no;
+            if (total === 0) return '0% aprovação';
+            return `${Math.round((yes / total) * 100)}% aprovação`;
+          })()}
         </div>
       </div>
     </div>
