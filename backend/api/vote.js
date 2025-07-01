@@ -23,25 +23,32 @@ module.exports = app => {
             const cardExists = await app.db('cards').where({ id: vote.cardID }).first();
             if (!cardExists) throw 'O card informado não existe';
     
-            // Impede voto duplicado do mesmo usuário no mesmo card
+            // Verifica se já existe voto do usuário para este card
             const existingVote = await app.db('votes')
                 .where({ cardID: vote.cardID, userID: vote.userID })
                 .first();
     
-            if (existingVote) {
-                throw 'Usuário já votou neste card';
-            }
-    
-            // Inserção no banco
-            await app.db('votes').insert({
+            const voteData = {
                 cardID: vote.cardID,
                 userID: vote.userID,
                 vote: vote.vote,
                 anonymous: vote.anonymous || false,
-                showVotes: vote.showVotes || false // Adicionar esta linha para salvar o campo showVotes
-            });
-    
-            return res.status(200).send('Voto registrado com sucesso!');
+                showVotes: vote.showVotes || false
+            };
+
+            if (existingVote) {
+                // Se já existe, atualiza o voto
+                await app.db('votes')
+                    .where({ cardID: vote.cardID, userID: vote.userID })
+                    .update(voteData);
+                
+                return res.status(200).send('Voto atualizado com sucesso!');
+            } else {
+                // Se não existe, insere novo voto
+                await app.db('votes').insert(voteData);
+                
+                return res.status(200).send('Voto registrado com sucesso!');
+            }
         } catch (msg) {
             return res.status(400).send(msg);
         }
@@ -186,6 +193,49 @@ module.exports = app => {
         }
     };
 
-    return { save, get, getGroupedByCard, getVisibleVotes };
+    // Busca voto específico de um usuário em um card
+    const getUserVoteForCard = async (req, res) => {
+        try {
+            const { userId, cardId } = req.params;
+            
+            const vote = await app.db('votes')
+                .where({ userID: userId, cardID: cardId })
+                .first();
+            
+            if (vote) {
+                res.json({ vote: vote.vote });
+            } else {
+                res.json({ vote: null });
+            }
+        } catch (error) {
+            console.error('Erro ao buscar voto do usuário:', error);
+            res.status(500).send('Erro interno do servidor');
+        }
+    };
+
+    // Busca contagem de votos para um card específico
+    const getCardVoteCount = async (req, res) => {
+        try {
+            const { cardId } = req.params;
+            
+            const result = await app.db('votes')
+                .where({ cardID: cardId })
+                .select(
+                    app.db.raw('SUM(CASE WHEN vote = true THEN 1 ELSE 0 END) as yes'),
+                    app.db.raw('SUM(CASE WHEN vote = false THEN 1 ELSE 0 END) as no')
+                );
+            
+            const count = result[0] || { yes: 0, no: 0 };
+            res.json({
+                yes: parseInt(count.yes) || 0,
+                no: parseInt(count.no) || 0
+            });
+        } catch (error) {
+            console.error('Erro ao buscar contagem de votos:', error);
+            res.status(500).send('Erro interno do servidor');
+        }
+    };
+
+    return { save, get, getGroupedByCard, getVisibleVotes, getUserVoteForCard, getCardVoteCount };
 };
 

@@ -102,16 +102,42 @@ export const voteCard = async (voteData: VoteData): Promise<void> => {
 };
 
 /**
- * Busca votos de um card específico
+ * Busca votos de um card específico (Substituída por getCardVoteCount)
  */
 export const getCardVotes = async (cardId: number): Promise<{ yes: number; no: number }> => {
   try {
-    // Esta rota pode não existir ainda no backend, mas vamos criar a estrutura
-    const response = await api.get(`/votes/card/${cardId}`);
+    // Usa a rota correta implementada
+    const response = await api.get(`/votes/count/${cardId}`);
     return response.data;
   } catch (error: any) {
     console.error('Erro ao buscar votos:', error);
     // Retorna zeros se não conseguir buscar
+    return { yes: 0, no: 0 };
+  }
+};
+
+/**
+ * Busca o voto do usuário atual em um card específico
+ */
+export const getUserVoteForCard = async (cardId: number, userId: number): Promise<boolean | null> => {
+  try {
+    const response = await api.get(`/votes/user/${userId}/card/${cardId}`);
+    return response.data.vote; // true = sim, false = não, null = não votou
+  } catch (error: any) {
+    console.error('Erro ao buscar voto do usuário:', error);
+    return null; // Usuário não votou
+  }
+};
+
+/**
+ * Busca contagem de votos de um card específico
+ */
+export const getCardVoteCount = async (cardId: number): Promise<{ yes: number; no: number }> => {
+  try {
+    const response = await api.get(`/votes/count/${cardId}`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao buscar contagem de votos:', error);
     return { yes: 0, no: 0 };
   }
 };

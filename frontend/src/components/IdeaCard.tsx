@@ -1,7 +1,7 @@
 
 
-import { useState } from 'react';
-import { Card, voteCard } from '../services/cardService';
+import { useState, useEffect } from 'react';
+import { Card, voteCard, getUserVoteForCard, getCardVoteCount } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
 
 interface IdeaProps {
@@ -13,6 +13,35 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
   const { user, isLoggedIn } = useAuth();
   const [isVoting, setIsVoting] = useState(false);
   const [userVote, setUserVote] = useState<boolean | null>(null);
+  const [voteCount, setVoteCount] = useState<{ yes: number; no: number }>({
+    yes: idea.votes?.yes || 0,
+    no: idea.votes?.no || 0
+  });
+  const [isLoadingVotes, setIsLoadingVotes] = useState(false);
+
+  // Carrega voto do usuário e contagem total quando componente monta
+  useEffect(() => {
+    const loadVoteData = async () => {
+      if (!isLoggedIn || !user) return;
+      
+      setIsLoadingVotes(true);
+      try {
+        // Carrega voto atual do usuário
+        const currentUserVote = await getUserVoteForCard(idea.id, user.id);
+        setUserVote(currentUserVote);
+        
+        // Carrega contagem total de votos
+        const totalVotes = await getCardVoteCount(idea.id);
+        setVoteCount(totalVotes);
+      } catch (error) {
+        console.error('Erro ao carregar dados de voto:', error);
+      } finally {
+        setIsLoadingVotes(false);
+      }
+    };
+
+    loadVoteData();
+  }, [idea.id, isLoggedIn, user]);
 
   // Calcula tempo restante
   const calculateTimeLeft = () => {
@@ -46,6 +75,9 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
     try {
       const voteValue = type === 'yes';
       
+      // Se o usuário já votou a mesma coisa, permite trocar o voto
+      // (a lógica de atualização vs inserção será handled pelo backend)
+      
       await voteCard({
         cardID: idea.id,
         vote: voteValue,
@@ -54,18 +86,34 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
         showVotes: true
       });
 
-      // Atualiza o estado local
+      // Atualiza o voto local do usuário
+      const previousVote = userVote;
       setUserVote(voteValue);
       
-      // Atualiza os votos no componente pai
-      const currentVotes = idea.votes || { yes: 0, no: 0 };
-      const newVotes = {
-        yes: type === 'yes' ? currentVotes.yes + 1 : currentVotes.yes,
-        no: type === 'no' ? currentVotes.no + 1 : currentVotes.no
-      };
-      
-      if (onVoteUpdate) {
-        onVoteUpdate(idea.id, newVotes);
+      // Calcula nova contagem de votos apenas se houve mudança
+      if (previousVote !== voteValue) {
+        let newVoteCount = { ...voteCount };
+        
+        // Se tinha voto anterior, remove ele da contagem
+        if (previousVote === true) {
+          newVoteCount.yes = Math.max(0, newVoteCount.yes - 1);
+        } else if (previousVote === false) {
+          newVoteCount.no = Math.max(0, newVoteCount.no - 1);
+        }
+        
+        // Adiciona o novo voto
+        if (voteValue) {
+          newVoteCount.yes = newVoteCount.yes + 1;
+        } else {
+          newVoteCount.no = newVoteCount.no + 1;
+        }
+        
+        setVoteCount(newVoteCount);
+        
+        // Notifica componente pai
+        if (onVoteUpdate) {
+          onVoteUpdate(idea.id, newVoteCount);
+        }
       }
       
     } catch (error: any) {
@@ -119,39 +167,57 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
           {/* Vote Yes */}
           <button
             onClick={() => handleVote('yes')}
-            disabled={isVoting || calculateTimeLeft() === 'Votação encerrada'}
-            title={!isLoggedIn ? 'Faça login para votar' : 'Votar SIM'}
+            disabled={isVoting || calculateTimeLeft() === 'Votação encerrada' || isLoadingVotes}
+            title={!isLoggedIn ? 'Faça login para votar' : userVote === true ? 'Você votou SIM' : 'Votar SIM'}
             className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors duration-200 group ${
               userVote === true 
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 ring-2 ring-green-300 dark:ring-green-600'
                 : isLoggedIn 
                   ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
                   : 'text-gray-400 dark:text-gray-500 cursor-help'
-            } ${isVoting || calculateTimeLeft() === 'Votação encerrada' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            } ${isVoting || calculateTimeLeft() === 'Votação encerrada' || isLoadingVotes ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5 8.293 7.207a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-medium">{idea.votes?.yes || 0}</span>
+            {isVoting && userVote !== true ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5 8.293 7.207a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+            <span className="text-sm font-medium">
+              {isLoadingVotes ? '...' : voteCount.yes}
+            </span>
           </button>
 
           {/* Vote No */}
           <button
             onClick={() => handleVote('no')}
-            disabled={isVoting || calculateTimeLeft() === 'Votação encerrada'}
-            title={!isLoggedIn ? 'Faça login para votar' : 'Votar NÃO'}
+            disabled={isVoting || calculateTimeLeft() === 'Votação encerrada' || isLoadingVotes}
+            title={!isLoggedIn ? 'Faça login para votar' : userVote === false ? 'Você votou NÃO' : 'Votar NÃO'}
             className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors duration-200 group ${
               userVote === false 
-                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 ring-2 ring-red-300 dark:ring-red-600'
                 : isLoggedIn 
                   ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
                   : 'text-gray-400 dark:text-gray-500 cursor-help'
-            } ${isVoting || calculateTimeLeft() === 'Votação encerrada' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            } ${isVoting || calculateTimeLeft() === 'Votação encerrada' || isLoadingVotes ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <span className="text-sm font-medium">{idea.votes?.no || 0}</span>
+            {isVoting && userVote !== false ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            )}
+            <span className="text-sm font-medium">
+              {isLoadingVotes ? '...' : voteCount.no}
+            </span>
           </button>
 
           {/* Share placeholder */}
@@ -165,9 +231,10 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
         {/* Vote percentage */}
         <div className="text-xs text-gray-500 dark:text-gray-400">
           {(() => {
-            const yes = idea.votes?.yes || 0;
-            const no = idea.votes?.no || 0;
+            const yes = voteCount.yes;
+            const no = voteCount.no;
             const total = yes + no;
+            if (isLoadingVotes) return 'Carregando...';
             if (total === 0) return '0% aprovação';
             return `${Math.round((yes / total) * 100)}% aprovação`;
           })()}

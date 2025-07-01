@@ -47,6 +47,14 @@ module.exports = app => {
         .all(app.config.passport.authenticate()) // autentica o token
         .get(admin(app.api.vote.getVisibleVotes)) 
 
+    // Rota para buscar voto específico de um usuário em um card
+    app.route('/votes/user/:userId/card/:cardId')
+        .get(app.api.vote.getUserVoteForCard) // Público para mostrar votos
+
+    // Rota para buscar contagem de votos de um card
+    app.route('/votes/count/:cardId')
+        .get(app.api.vote.getCardVoteCount) // Público para mostrar contagem
+
 
 
 
