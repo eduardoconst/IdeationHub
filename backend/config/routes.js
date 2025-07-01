@@ -9,6 +9,10 @@ module.exports = app => {
 
 
 // rotas de usuario
+    // Rota para buscar total de usuários cadastrados (pública para estatísticas)
+    app.route('/users/total-count')
+        .get(app.api.user.getTotalUsers) // Público para mostrar estatísticas
+
     app.route('/users')
         .all(app.config.passport.authenticate()) // autentica o token
         .post(app.api.user.save) 

@@ -18,7 +18,7 @@
 
 import { useState, useEffect } from 'react';
 import IdeaCard from '../components/IdeaCard';
-import { getCards, Card, getTotalPositiveVotes } from '../services/cardService';
+import { getCards, Card, getTotalPositiveVotes, getTotalUsers } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
 
@@ -32,6 +32,8 @@ const Home = ({ onOpenLogin }: HomeProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
+  
   
   // Usa localStorage para persistir filtros e ordenação
   const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent'>('homeFilter', 'all');
@@ -50,14 +52,16 @@ const Home = ({ onOpenLogin }: HomeProps) => {
       
       console.log('🔄 Carregando dados do backend...');
       
-      // Carrega cards e total de votos positivos em paralelo
-      const [cardsData, totalVotes] = await Promise.all([
+      // Carrega cards, total de votos positivos e total de usuários em paralelo
+      const [cardsData, totalVotes, usersCount] = await Promise.all([
         getCards(),
-        getTotalPositiveVotes()
+        getTotalPositiveVotes(),
+        getTotalUsers()
       ]);
       
       console.log('✅ Cards carregados:', cardsData);
       console.log('✅ Total votos positivos:', totalVotes);
+      console.log('✅ Total usuários:', usersCount);
       
       // Para cada card, vamos simular os votos (até implementarmos a contagem real)
       const cardsWithVotes = cardsData.map(card => ({
@@ -67,6 +71,7 @@ const Home = ({ onOpenLogin }: HomeProps) => {
       
       setIdeas(cardsWithVotes);
       setTotalPositiveVotes(totalVotes);
+      setTotalUsers(usersCount);
     } catch (err: any) {
       console.error('❌ Erro ao carregar dados:', err);
       
@@ -211,7 +216,9 @@ const Home = ({ onOpenLogin }: HomeProps) => {
             </div>
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Participantes</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">1.2k</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {isLoading ? '...' : totalUsers}
+              </p>
             </div>
           </div>
         </div>

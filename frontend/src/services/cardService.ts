@@ -166,3 +166,16 @@ export const removeUserVote = async (cardId: number, userId: number): Promise<vo
     throw new Error('Erro ao remover voto. Tente novamente.');
   }
 };
+
+/**
+ * Busca o total de usuários cadastrados no sistema
+ */
+export const getTotalUsers = async (): Promise<number> => {
+  try {
+    const response = await api.get('/users/total-count');
+    return response.data.total || 0;
+  } catch (error: any) {
+    console.error('Erro ao buscar total de usuários:', error);
+    return 0;
+  }
+};

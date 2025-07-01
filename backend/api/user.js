@@ -74,6 +74,21 @@ module.exports = app => {
             .catch(err => res.status(500).send(err))
     }
 
+    // Função que busca o total de usuários cadastrados
+    const getTotalUsers = async (req, res) => {
+        try {
+            const result = await app.db('users')
+                .whereNull('deleted_at') // Conta apenas usuários que não foram excluídos
+                .count('* as total');
+            
+            const total = parseInt(result[0].total) || 0;
+            res.json({ total });
+        } catch (error) {
+            console.error('Erro ao buscar total de usuários:', error);
+            res.status(500).send('Erro interno do servidor');
+        }
+    };
+
 
     const remove = async (req, res) => { 
         try{
@@ -102,5 +117,5 @@ module.exports = app => {
 
 
     // Retorna as funções save e get
-    return { save, get , getById , remove } 
+    return { save, get , getById , remove , getTotalUsers } 
 }
