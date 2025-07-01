@@ -18,7 +18,7 @@
 
 import { useState, useEffect } from 'react';
 import IdeaCard from '../components/IdeaCard';
-import { getCards, Card } from '../services/cardService';
+import { getCards, Card, getTotalPositiveVotes } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
 
@@ -31,6 +31,7 @@ const Home = ({ onOpenLogin }: HomeProps) => {
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
   
   // Usa localStorage para persistir filtros e ordenação
   const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent'>('homeFilter', 'all');
@@ -47,9 +48,16 @@ const Home = ({ onOpenLogin }: HomeProps) => {
       setIsLoading(true);
       setError(null);
       
-      console.log('🔄 Carregando cards do backend...');
-      const cardsData = await getCards();
+      console.log('🔄 Carregando dados do backend...');
+      
+      // Carrega cards e total de votos positivos em paralelo
+      const [cardsData, totalVotes] = await Promise.all([
+        getCards(),
+        getTotalPositiveVotes()
+      ]);
+      
       console.log('✅ Cards carregados:', cardsData);
+      console.log('✅ Total votos positivos:', totalVotes);
       
       // Para cada card, vamos simular os votos (até implementarmos a contagem real)
       const cardsWithVotes = cardsData.map(card => ({
@@ -58,8 +66,9 @@ const Home = ({ onOpenLogin }: HomeProps) => {
       }));
       
       setIdeas(cardsWithVotes);
+      setTotalPositiveVotes(totalVotes);
     } catch (err: any) {
-      console.error('❌ Erro ao carregar cards:', err);
+      console.error('❌ Erro ao carregar dados:', err);
       
       // Tratamento específico de erros
       if (err.message.includes('Network Error')) {
@@ -73,13 +82,19 @@ const Home = ({ onOpenLogin }: HomeProps) => {
   };
 
   const handleVoteUpdate = (cardId: number, newVotes: { yes: number; no: number }) => {
-    setIdeas(prevIdeas => 
-      prevIdeas.map(idea => 
+    setIdeas(prevIdeas => {
+      const updatedIdeas = prevIdeas.map(idea => 
         idea.id === cardId 
           ? { ...idea, votes: newVotes }
           : idea
-      )
-    );
+      );
+      
+      // Recalcula total de votos positivos localmente
+      const newTotalPositiveVotes = updatedIdeas.reduce((acc, idea) => acc + (idea.votes?.yes || 0), 0);
+      setTotalPositiveVotes(newTotalPositiveVotes);
+      
+      return updatedIdeas;
+    });
   };
 
   // Loading state
@@ -181,7 +196,7 @@ const Home = ({ onOpenLogin }: HomeProps) => {
             <div className="ml-3">
               <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Votos Positivos</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {ideas.reduce((acc, idea) => acc + (idea.votes?.yes || 0), 0)}
+                {totalPositiveVotes}
               </p>
             </div>
           </div>
@@ -201,35 +216,6 @@ const Home = ({ onOpenLogin }: HomeProps) => {
           </div>
         </div>
       </div>
-
-      {/* Aviso para usuários não logados */}
-      {!isLoggedIn && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-amber-800 dark:text-amber-200">
-                Você está navegando como visitante. 
-                <button
-                  onClick={() => {
-                    if (onOpenLogin) {
-                      onOpenLogin();
-                    }
-                  }}
-                  className="font-medium underline hover:no-underline ml-1"
-                >
-                  Faça login
-                </button>
-                {' '}para votar e criar suas próprias ideias.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">

@@ -50,10 +50,19 @@ module.exports = app => {
     // Rota para buscar voto específico de um usuário em um card
     app.route('/votes/user/:userId/card/:cardId')
         .get(app.api.vote.getUserVoteForCard) // Público para mostrar votos
+        .delete(app.api.vote.removeVote) // Permite remover voto
 
     // Rota para buscar contagem de votos de um card
     app.route('/votes/count/:cardId')
         .get(app.api.vote.getCardVoteCount) // Público para mostrar contagem
+
+    // Rota para buscar total de votos positivos de todos os cards
+    app.route('/votes/total-positive')
+        .get(app.api.vote.getTotalPositiveVotes) // Público para mostrar estatísticas
+
+    // Rota de debug (temporária)
+    app.route('/votes/debug/:cardId/:userId')
+        .get(app.api.vote.debugVoteData) // Debug dos dados de voto
 
 
 

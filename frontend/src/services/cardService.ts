@@ -141,3 +141,28 @@ export const getCardVoteCount = async (cardId: number): Promise<{ yes: number; n
     return { yes: 0, no: 0 };
   }
 };
+
+/**
+ * Busca o total de votos positivos de todos os cards
+ */
+export const getTotalPositiveVotes = async (): Promise<number> => {
+  try {
+    const response = await api.get('/votes/total-positive');
+    return response.data.total || 0;
+  } catch (error: any) {
+    console.error('Erro ao buscar total de votos positivos:', error);
+    return 0;
+  }
+};
+
+/**
+ * Remove o voto de um usuário em um card específico
+ */
+export const removeUserVote = async (cardId: number, userId: number): Promise<void> => {
+  try {
+    await api.delete(`/votes/user/${userId}/card/${cardId}`);
+  } catch (error: any) {
+    console.error('Erro ao remover voto:', error);
+    throw new Error('Erro ao remover voto. Tente novamente.');
+  }
+};

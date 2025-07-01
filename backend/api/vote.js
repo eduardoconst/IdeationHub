@@ -6,8 +6,11 @@ module.exports = app => {
         const vote = { ...req.body };
         if (req.params.id) vote.id = req.params.id;
     
+        const trx = await app.db.transaction();
+        
         try {
-            console.log("Dados recebidos:", vote); // Verificar os dados enviados no POST
+            console.log("=== SAVE VOTE DEBUG ===");
+            console.log("Dados recebidos:", vote);
 
             // Validações
             existsOrError(vote.cardID, 'ID do card não informado');
@@ -20,13 +23,15 @@ module.exports = app => {
             vote.showVotes = vote.showVotes || false;
     
             // Confirma se o card existe
-            const cardExists = await app.db('cards').where({ id: vote.cardID }).first();
+            const cardExists = await trx('cards').where({ id: vote.cardID }).first();
             if (!cardExists) throw 'O card informado não existe';
     
             // Verifica se já existe voto do usuário para este card
-            const existingVote = await app.db('votes')
+            const existingVote = await trx('votes')
                 .where({ cardID: vote.cardID, userID: vote.userID })
                 .first();
+                
+            console.log("Voto existente encontrado:", existingVote);
     
             const voteData = {
                 cardID: vote.cardID,
@@ -35,21 +40,30 @@ module.exports = app => {
                 anonymous: vote.anonymous || false,
                 showVotes: vote.showVotes || false
             };
+            
+            console.log("Dados do voto a serem salvos:", voteData);
 
             if (existingVote) {
                 // Se já existe, atualiza o voto
-                await app.db('votes')
+                console.log("Atualizando voto existente...");
+                await trx('votes')
                     .where({ cardID: vote.cardID, userID: vote.userID })
                     .update(voteData);
                 
-                return res.status(200).send('Voto atualizado com sucesso!');
+                console.log("Voto atualizado com sucesso!");
             } else {
                 // Se não existe, insere novo voto
-                await app.db('votes').insert(voteData);
+                console.log("Inserindo novo voto...");
+                await trx('votes').insert(voteData);
                 
-                return res.status(200).send('Voto registrado com sucesso!');
+                console.log("Novo voto inserido com sucesso!");
             }
+            
+            await trx.commit();
+            return res.status(200).send(existingVote ? 'Voto atualizado com sucesso!' : 'Voto registrado com sucesso!');
         } catch (msg) {
+            await trx.rollback();
+            console.error("Erro no save:", msg);
             return res.status(400).send(msg);
         }
     };
@@ -218,6 +232,9 @@ module.exports = app => {
         try {
             const { cardId } = req.params;
             
+            console.log("=== GET CARD VOTE COUNT DEBUG ===");
+            console.log(`Buscando contagem para Card ID: ${cardId}`);
+            
             const result = await app.db('votes')
                 .where({ cardID: cardId })
                 .select(
@@ -225,17 +242,118 @@ module.exports = app => {
                     app.db.raw('SUM(CASE WHEN vote = false THEN 1 ELSE 0 END) as no')
                 );
             
+            console.log("Resultado bruto da query:", result);
+            
             const count = result[0] || { yes: 0, no: 0 };
-            res.json({
+            const response = {
                 yes: parseInt(count.yes) || 0,
                 no: parseInt(count.no) || 0
-            });
+            };
+            
+            console.log("Resposta enviada:", response);
+            res.json(response);
         } catch (error) {
             console.error('Erro ao buscar contagem de votos:', error);
             res.status(500).send('Erro interno do servidor');
         }
     };
 
-    return { save, get, getGroupedByCard, getVisibleVotes, getUserVoteForCard, getCardVoteCount };
+    // Busca total de votos positivos de todos os cards
+    const getTotalPositiveVotes = async (req, res) => {
+        try {
+            const result = await app.db('votes')
+                .where({ vote: true })
+                .count('* as total');
+            
+            const total = parseInt(result[0].total) || 0;
+            res.json({ total });
+        } catch (error) {
+            console.error('Erro ao buscar total de votos positivos:', error);
+            res.status(500).send('Erro interno do servidor');
+        }
+    };
+
+    // Remove voto de um usuário em um card específico
+    const removeVote = async (req, res) => {
+        const trx = await app.db.transaction();
+        
+        try {
+            const { userId, cardId } = req.params;
+            
+            console.log("=== REMOVE VOTE DEBUG ===");
+            console.log(`Removendo voto - Card ID: ${cardId}, User ID: ${userId}`);
+            
+            // Verifica se o voto existe antes de remover
+            const existingVote = await trx('votes')
+                .where({ userID: userId, cardID: cardId })
+                .first();
+                
+            console.log("Voto existente antes da remoção:", existingVote);
+            
+            if (!existingVote) {
+                await trx.rollback();
+                console.log("Nenhum voto encontrado para remover");
+                return res.status(404).json({ message: 'Voto não encontrado' });
+            }
+            
+            const deleted = await trx('votes')
+                .where({ userID: userId, cardID: cardId })
+                .del();
+            
+            console.log(`Número de registros removidos: ${deleted}`);
+            
+            await trx.commit();
+            console.log("Voto removido com sucesso!");
+            res.json({ message: 'Voto removido com sucesso' });
+        } catch (error) {
+            await trx.rollback();
+            console.error('Erro ao remover voto:', error);
+            res.status(500).send('Erro interno do servidor');
+        }
+    };
+
+    // Função de debug para verificar dados do banco
+    const debugVoteData = async (req, res) => {
+        try {
+            const { cardId, userId } = req.params;
+            
+            console.log('=== DEBUG VOTE DATA ===');
+            console.log(`Card ID: ${cardId}, User ID: ${userId}`);
+            
+            // Busca todos os votos para este card
+            const allVotes = await app.db('votes')
+                .where({ cardID: cardId });
+            
+            console.log('Todos os votos para este card:', allVotes);
+            
+            // Busca voto específico do usuário
+            const userVote = await app.db('votes')
+                .where({ cardID: cardId, userID: userId })
+                .first();
+                
+            console.log('Voto específico do usuário:', userVote);
+            
+            // Conta votos
+            const voteCount = await app.db('votes')
+                .where({ cardID: cardId })
+                .select(
+                    app.db.raw('SUM(CASE WHEN vote = true THEN 1 ELSE 0 END) as yes'),
+                    app.db.raw('SUM(CASE WHEN vote = false THEN 1 ELSE 0 END) as no')
+                );
+                
+            console.log('Contagem de votos:', voteCount[0]);
+            
+            res.json({
+                allVotes,
+                userVote,
+                count: voteCount[0]
+            });
+        } catch (error) {
+            console.error('Erro no debug:', error);
+            res.status(500).json({ error: error.message });
+        }
+    };
+
+    return { save, get, getGroupedByCard, getVisibleVotes, getUserVoteForCard, getCardVoteCount, getTotalPositiveVotes, removeVote, debugVoteData };
 };
 

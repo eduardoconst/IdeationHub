@@ -1,7 +1,7 @@
 
 
 import { useState, useEffect } from 'react';
-import { Card, voteCard, getUserVoteForCard, getCardVoteCount } from '../services/cardService';
+import { Card, voteCard, getUserVoteForCard, getCardVoteCount, removeUserVote } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
 
 interface IdeaProps {
@@ -75,48 +75,43 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
     try {
       const voteValue = type === 'yes';
       
-      // Se o usuário já votou a mesma coisa, permite trocar o voto
-      // (a lógica de atualização vs inserção será handled pelo backend)
-      
-      await voteCard({
-        cardID: idea.id,
-        vote: voteValue,
-        userID: user.id,
-        anonymous: false,
-        showVotes: true
-      });
+      // Se o usuário clica no mesmo voto que já tem, remove o voto
+      if (userVote === voteValue) {
+        console.log('Removendo voto do usuário...');
+        await removeUserVote(idea.id, user.id);
+      } else {
+        // Caso contrário, vota ou muda o voto
+        console.log('Salvando voto do usuário...');
+        await voteCard({
+          cardID: idea.id,
+          vote: voteValue,
+          userID: user.id,
+          anonymous: false,
+          showVotes: true
+        });
+      }
 
-      // Atualiza o voto local do usuário
-      const previousVote = userVote;
-      setUserVote(voteValue);
+      // Aguarda um pequeno delay para garantir que a operação foi processada
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Após votar/remover com sucesso, recarrega os dados reais do backend
+      console.log('Recarregando dados do backend...');
+      const [newUserVote, newVoteCount] = await Promise.all([
+        getUserVoteForCard(idea.id, user.id),
+        getCardVoteCount(idea.id)
+      ]);
       
-      // Calcula nova contagem de votos apenas se houve mudança
-      if (previousVote !== voteValue) {
-        let newVoteCount = { ...voteCount };
-        
-        // Se tinha voto anterior, remove ele da contagem
-        if (previousVote === true) {
-          newVoteCount.yes = Math.max(0, newVoteCount.yes - 1);
-        } else if (previousVote === false) {
-          newVoteCount.no = Math.max(0, newVoteCount.no - 1);
-        }
-        
-        // Adiciona o novo voto
-        if (voteValue) {
-          newVoteCount.yes = newVoteCount.yes + 1;
-        } else {
-          newVoteCount.no = newVoteCount.no + 1;
-        }
-        
-        setVoteCount(newVoteCount);
-        
-        // Notifica componente pai
-        if (onVoteUpdate) {
-          onVoteUpdate(idea.id, newVoteCount);
-        }
+      // Atualiza com dados reais do backend
+      setUserVote(newUserVote);
+      setVoteCount(newVoteCount);
+      
+      // Notifica componente pai com dados reais
+      if (onVoteUpdate) {
+        onVoteUpdate(idea.id, newVoteCount);
       }
       
     } catch (error: any) {
+      console.error('Erro no handleVote:', error);
       alert(error.message);
     } finally {
       setIsVoting(false);
@@ -228,7 +223,7 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
           </button>
         </div>
 
-        {/* Vote percentage */}
+        {/* Percentage of positive votes */}
         <div className="text-xs text-gray-500 dark:text-gray-400">
           {(() => {
             const yes = voteCount.yes;
@@ -236,7 +231,8 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
             const total = yes + no;
             if (isLoadingVotes) return 'Carregando...';
             if (total === 0) return '0% aprovação';
-            return `${Math.round((yes / total) * 100)}% aprovação`;
+            const percentage = Math.round((yes / total) * 100);
+            return `${percentage}% aprovação`;
           })()}
         </div>
       </div>
