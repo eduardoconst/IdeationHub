@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { createCard } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
@@ -38,12 +39,16 @@ const CreateIdeaModal = ({ isOpen, onClose, onSubmit }: CreateIdeaModalProps) =>
       newErrors.title = 'Título é obrigatório';
     } else if (formData.title.length < 5) {
       newErrors.title = 'Título deve ter pelo menos 5 caracteres';
+    } else if (formData.title.length > 100) {
+      newErrors.title = 'Título deve ter no máximo 100 caracteres';
     }
 
     if (!formData.description.trim()) {
       newErrors.description = 'Descrição é obrigatória';
     } else if (formData.description.length < 10) {
       newErrors.description = 'Descrição deve ter pelo menos 10 caracteres';
+    } else if (formData.description.length > 1000) {
+      newErrors.description = 'Descrição deve ter no máximo 1000 caracteres';
     }
 
     if (formData.duration < 1 || formData.duration > 168) {
@@ -175,14 +180,14 @@ const CreateIdeaModal = ({ isOpen, onClose, onSubmit }: CreateIdeaModalProps) =>
                 errors.description ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
               }`}
               placeholder="Descreva sua ideia em detalhes. Explique o problema que ela resolve, como funcionaria e quais benefícios traria..."
-              maxLength={500}
+              maxLength={1000}
             />
             <div className="flex justify-between mt-1">
               {errors.description && (
                 <p className="text-sm text-red-600 dark:text-red-400">{errors.description}</p>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400 ml-auto">
-                {formData.description.length}/500
+                {formData.description.length}/1000
               </p>
             </div>
           </div>

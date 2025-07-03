@@ -11,6 +11,14 @@ module.exports = app => {
             existsOrError(card.userID, 'Autor não informado')
             existsOrError(card.voting_start, 'Data de início da votação não informada')
             existsOrError(card.voting_end, 'Data de término da votação não informada')
+            
+            // Validações de tamanho
+            if (card.title && card.title.length > 100) {
+                throw 'Título deve ter no máximo 100 caracteres'
+            }
+            if (card.content && card.content.length > 1000) {
+                throw 'Conteúdo deve ter no máximo 1000 caracteres'
+            }
         } catch(msg) {
             return res.status(400).send(msg)
         }

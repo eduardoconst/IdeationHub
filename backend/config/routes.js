@@ -68,7 +68,45 @@ module.exports = app => {
     app.route('/votes/debug/:cardId/:userId')
         .get(app.api.vote.debugVoteData) // Debug dos dados de voto
 
+// Rotas administrativas
+    // Estatísticas gerais do sistema
+    app.route('/admin/stats')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.admin.getStats)) // apenas admin pode ver estatísticas
 
+    // Gerenciamento de usuários
+    app.route('/admin/users')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.admin.getAllUsers)) // listar todos os usuários
+
+    app.route('/admin/users/:id/promote')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .patch(admin(app.api.admin.promoteUser)) // promover usuário a admin
+
+    app.route('/admin/users/:id/demote')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .patch(admin(app.api.admin.demoteUser)) // remover admin de usuário
+
+    app.route('/admin/users/:id/delete')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .delete(admin(app.api.admin.deleteUser)) // excluir usuário
+
+    // Ações do sistema
+    app.route('/admin/refresh')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .post(admin(app.api.admin.refreshData)) // atualizar cache/dados
+
+    app.route('/admin/export')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.admin.exportData)) // exportar dados do sistema
+
+    app.route('/admin/cleanup')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .post(admin(app.api.admin.cleanupOldData)) // limpar dados antigos
+
+    app.route('/admin/backup')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .post(admin(app.api.admin.createBackup)) // criar backup do sistema
 
 
 };

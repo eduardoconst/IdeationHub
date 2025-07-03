@@ -8,9 +8,10 @@ interface NavbarProps {
   onOpenLogin: () => void;
   onOpenCreateIdea: () => void;
   onOpenSettings?: () => void;
+  onOpenAdminCenter?: () => void;
 }
 
-const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea, onOpenSettings }: NavbarProps) => {
+const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea, onOpenSettings, onOpenAdminCenter }: NavbarProps) => {
   const { user, isLoggedIn, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -205,15 +206,17 @@ const Navbar = ({ darkMode, onToggleDarkMode, onOpenLogin, onOpenCreateIdea, onO
                             <button
                               onClick={() => {
                                 setShowDropdown(false);
-                                console.log('Gerenciar usuários');
+                                if (onOpenAdminCenter) {
+                                  onOpenAdminCenter();
+                                }
                               }}
                               className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                             >
                               <div className="flex items-center space-x-3">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.414 2.414l1.414-1.414M3 3l3.293 3.293a1 1 0 001.414 0l1.586-1.586a1 1 0 011.414 0L12 6.414a1 1 0 001.414 0L15 5" />
                                 </svg>
-                                <span>Gerenciar Usuários</span>
+                                <span>Admin Center</span>
                               </div>
                             </button>
 

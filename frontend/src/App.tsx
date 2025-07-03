@@ -5,6 +5,7 @@ import LoginModal from './components/LoginModal';
 import SignupModal from './components/SignupModal';
 import CreateIdeaModal from './components/CreateIdeaModal';
 import SettingsModal from './components/SettingsModal';
+import AdminCenterModal from './components/AdminCenterModal';
 import { AuthProvider } from './context/AuthContext';
 import { useUserPreferences } from './hooks/useUserPreferences';
 
@@ -14,6 +15,7 @@ function App() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showCreateIdeaModal, setShowCreateIdeaModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showAdminCenterModal, setShowAdminCenterModal] = useState(false);
 
   const handleSwitchToSignup = () => {
     setShowLoginModal(false);
@@ -30,6 +32,7 @@ function App() {
     setShowSignupModal(false);
     setShowCreateIdeaModal(false);
     setShowSettingsModal(false);
+    setShowAdminCenterModal(false);
   };
 
   return (
@@ -42,6 +45,7 @@ function App() {
             onOpenLogin={() => setShowLoginModal(true)}
             onOpenCreateIdea={() => setShowCreateIdeaModal(true)}
             onOpenSettings={() => setShowSettingsModal(true)}
+            onOpenAdminCenter={() => setShowAdminCenterModal(true)}
           />
           
           <main className="max-w-4xl mx-auto px-4 py-6">
@@ -76,6 +80,18 @@ function App() {
           <SettingsModal 
             isOpen={showSettingsModal}
             onClose={closeAllModals}
+          />
+
+          <AdminCenterModal 
+            isOpen={showAdminCenterModal}
+            onClose={closeAllModals}
+            onAction={(action, data) => {
+              console.log('Ação administrativa:', action, data);
+              // Aqui você pode implementar as ações específicas
+              if (action === 'refresh_data') {
+                window.location.reload();
+              }
+            }}
           />
         </div>
       </div>

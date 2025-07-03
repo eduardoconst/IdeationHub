@@ -16,36 +16,34 @@
  * - Cálculo dinâmico de estatísticas vindas do banco
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import IdeaCard from '../components/IdeaCard';
 import { getCards, Card, getTotalPositiveVotes, getTotalUsers } from '../services/cardService';
-import { useAuth } from '../context/AuthContext';
+// import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
+import { useUserPreferences } from '../hooks/useUserPreferences';
+
+
 
 interface HomeProps {
   onOpenLogin?: () => void;
 }
 
 const Home = ({ onOpenLogin }: HomeProps) => {
-  const { isLoggedIn } = useAuth();
+  // const { isLoggedIn } = useAuth();
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
   const [totalUsers, setTotalUsers] = useState<number>(0);
-  
+  const { preferences } = useUserPreferences();
+
   
   // Usa localStorage para persistir filtros e ordenação
   const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent'>('homeFilter', 'all');
   const [sortBy, setSortBy] = useLocalStorage<'votes' | 'time' | 'recent'>('homeSortBy', 'recent');
 
-  // Carregar cards do backend
-  useEffect(() => {
-    // Sempre carrega cards, independente do estado de login
-    loadCards();
-  }, []); // Remove isLoggedIn da dependência para sempre carregar
-
-  const loadCards = async () => {
+  const loadCards = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -84,7 +82,25 @@ const Home = ({ onOpenLogin }: HomeProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  // Carregar cards do backend
+  useEffect(() => {
+    // Sempre carrega cards, independente do estado de login
+    loadCards();
+  }, [loadCards]);
+
+  // Auto-refresh dos cards conforme preferência do usuário
+  useEffect(() => {
+    if (!preferences.autoRefresh) return;
+
+    const interval = setInterval(() => {
+      console.log('🔁 Auto-refresh ativado - Atualizando cards...');
+      loadCards();
+    }, 35000); // 35 segundos
+
+    return () => clearInterval(interval); // Limpa ao desmontar
+  }, [preferences.autoRefresh, loadCards]);
 
   const handleVoteUpdate = (cardId: number, newVotes: { yes: number; no: number }) => {
     setIdeas(prevIdeas => {
