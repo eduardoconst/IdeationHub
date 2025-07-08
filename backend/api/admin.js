@@ -100,7 +100,7 @@ module.exports = app => {
                 .whereNull('deleted_at')
                 .first();
 
-            notExistsOrError(user, 'Usuário não encontrado');
+            existsOrError(user, 'Usuário não encontrado');
 
             if (user.admin) {
                 return res.status(400).json({ message: 'Usuário já é administrador' });
@@ -142,7 +142,7 @@ module.exports = app => {
                 .whereNull('deleted_at')
                 .first();
 
-            notExistsOrError(user, 'Usuário não encontrado');
+            existsOrError(user, 'Usuário não encontrado');
 
             if (!user.admin) {
                 return res.status(400).json({ message: 'Usuário não é administrador' });
@@ -197,7 +197,8 @@ module.exports = app => {
                 .whereNull('deleted_at')
                 .first();
 
-            notExistsOrError(user, 'Usuário não encontrado');
+                
+            existsOrError(user, 'Usuário não encontrado');
 
             // Verificar se não está tentando excluir a si mesmo
             if (parseInt(userId) === req.user.id) {

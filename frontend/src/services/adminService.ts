@@ -82,7 +82,7 @@ export const demoteUser = async (userId: number): Promise<void> => {
  */
 export const deleteUser = async (userId: number): Promise<void> => {
   try {
-    await api.delete(`/admin/users/${userId}`);
+    await api.delete(`/admin/users/${userId}/delete`);
   } catch (error: any) {
     console.error('Erro ao excluir usuário:', error);
     throw new Error(error.response?.data?.message || 'Erro ao excluir usuário');
