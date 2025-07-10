@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal';
 import SignupModal from './components/SignupModal';
 import CreateIdeaModal from './components/CreateIdeaModal';
-import SettingsModal from './components/SettingsModal';
+import ProfileModal from './components/ProfileModal';
 import AdminCenterModal from './components/AdminCenterModal';
 import { AuthProvider } from './context/AuthContext';
 import { useUserPreferences } from './hooks/useUserPreferences';
@@ -14,8 +14,9 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showCreateIdeaModal, setShowCreateIdeaModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAdminCenterModal, setShowAdminCenterModal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const handleSwitchToSignup = () => {
     setShowLoginModal(false);
@@ -31,7 +32,7 @@ function App() {
     setShowLoginModal(false);
     setShowSignupModal(false);
     setShowCreateIdeaModal(false);
-    setShowSettingsModal(false);
+    setShowProfileModal(false);
     setShowAdminCenterModal(false);
   };
 
@@ -44,12 +45,19 @@ function App() {
             onToggleDarkMode={toggleDarkMode}
             onOpenLogin={() => setShowLoginModal(true)}
             onOpenCreateIdea={() => setShowCreateIdeaModal(true)}
-            onOpenSettings={() => setShowSettingsModal(true)}
+            onOpenSettings={() => setShowProfileModal(true)}
+            onOpenProfile={() => setShowProfileModal(true)}
             onOpenAdminCenter={() => setShowAdminCenterModal(true)}
+            searchTerm={searchTerm}
+            onSearchChange={setSearchTerm}
           />
           
           <main className="max-w-4xl mx-auto px-4 py-6">
-            <Home onOpenLogin={() => setShowLoginModal(true)} />
+            <Home 
+              onOpenLogin={() => setShowLoginModal(true)} 
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
           </main>
 
           {/* Modals */}
@@ -77,8 +85,8 @@ function App() {
             }}
           />
 
-          <SettingsModal 
-            isOpen={showSettingsModal}
+          <ProfileModal 
+            isOpen={showProfileModal}
             onClose={closeAllModals}
           />
 

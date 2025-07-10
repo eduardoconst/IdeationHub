@@ -27,9 +27,13 @@ module.exports = app => {
             exp: now + (60 * 60 * 24 * 3) // Expiração em 3 dias
         }
 
+        const token = jwt.encode(payload, authSecret);
+        console.log('🔐 Login - Payload criado:', payload);
+        console.log('🔐 Login - Token gerado (primeiros 50 chars):', token.substring(0, 50) + '...');
+
         res.json({
             ...payload,
-            token: jwt.encode(payload, authSecret)
+            token
         })
     }
 

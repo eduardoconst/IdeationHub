@@ -27,9 +27,11 @@ import { useUserPreferences } from '../hooks/useUserPreferences';
 
 interface HomeProps {
   onOpenLogin?: () => void;
+  searchTerm?: string;
+  onSearchChange?: (term: string) => void;
 }
 
-const Home = ({ onOpenLogin }: HomeProps) => {
+const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
   // const { isLoggedIn } = useAuth();
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,8 +42,8 @@ const Home = ({ onOpenLogin }: HomeProps) => {
 
   
   // Usa localStorage para persistir filtros e ordenação
-  const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent'>('homeFilter', 'all');
-  const [sortBy, setSortBy] = useLocalStorage<'votes' | 'time' | 'recent'>('homeSortBy', 'recent');
+  const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent' | 'active' | 'ended'>('homeFilter', 'all');
+  const [sortBy, setSortBy] = useLocalStorage<'votes' | 'time' | 'recent' | 'alphabetical'>('homeSortBy', 'recent');
 
   const loadCards = useCallback(async () => {
     try {
@@ -154,17 +156,40 @@ const Home = ({ onOpenLogin }: HomeProps) => {
   }
 
   const filteredIdeas = ideas.filter(idea => {
+    // Primeiro aplica o filtro de pesquisa
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      const matchesTitle = idea.title.toLowerCase().includes(searchLower);
+      const matchesContent = idea.content.toLowerCase().includes(searchLower);
+      const matchesAuthor = idea.userName?.toLowerCase().includes(searchLower);
+      
+      if (!matchesTitle && !matchesContent && !matchesAuthor) {
+        return false;
+      }
+    }
+
+    // Depois aplica os filtros de categoria
+    const now = new Date();
+    const endDate = new Date(idea.voting_end);
+    const startDate = new Date(idea.voting_start);
+    const isActive = now >= startDate && now <= endDate;
+    const isEnded = now > endDate;
+    
+    if (filter === 'active') {
+      return isActive;
+    }
+    if (filter === 'ended') {
+      return isEnded;
+    }
     if (filter === 'trending') {
       const totalVotes = (idea.votes?.yes || 0) + (idea.votes?.no || 0);
-      return totalVotes > 5; // Ideias com mais de 5 votos
+      return totalVotes > 3; // Ideias com mais de 3 votos (reduzido para incluir mais)
     }
     if (filter === 'recent') {
-      const now = new Date();
-      const startDate = new Date(idea.voting_start);
       const daysDiff = (now.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-      return daysDiff <= 7; // Ideias dos últimos 7 dias
+      return daysDiff <= 30; // Ideias dos últimos 30 dias (aumentado)
     }
-    return true;
+    return true; // 'all' - mostra tudo
   });
 
   const sortedIdeas = [...filteredIdeas].sort((a, b) => {
@@ -174,9 +199,25 @@ const Home = ({ onOpenLogin }: HomeProps) => {
       return bVotes - aVotes;
     }
     if (sortBy === 'time') {
-      return new Date(a.voting_end).getTime() - new Date(b.voting_end).getTime();
+      const now = new Date();
+      const aEnd = new Date(a.voting_end);
+      const bEnd = new Date(b.voting_end);
+      
+      // Se ambos estão ativos, ordena por tempo restante (menor primeiro)
+      if (aEnd > now && bEnd > now) {
+        return aEnd.getTime() - bEnd.getTime();
+      }
+      // Se apenas um está ativo, prioriza o ativo
+      if (aEnd > now && bEnd <= now) return -1;
+      if (bEnd > now && aEnd <= now) return 1;
+      // Se ambos estão encerrados, ordena por mais recentemente encerrado
+      return bEnd.getTime() - aEnd.getTime();
     }
-    return new Date(b.voting_start).getTime() - new Date(a.voting_start).getTime(); // recent
+    if (sortBy === 'alphabetical') {
+      return a.title.localeCompare(b.title);
+    }
+    // 'recent' - por data de criação mais recente
+    return new Date(b.voting_start).getTime() - new Date(a.voting_start).getTime();
   });
 
   return (
@@ -241,10 +282,12 @@ const Home = ({ onOpenLogin }: HomeProps) => {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-        <div className="flex space-x-1">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+        <div className="flex flex-wrap gap-2">
           {[
             { key: 'all', label: 'Todas' },
+            { key: 'active', label: 'Ativas' },
+            { key: 'ended', label: 'Encerradas' },
             { key: 'trending', label: 'Em Alta' },
             { key: 'recent', label: 'Recentes' }
           ].map(item => (
@@ -269,9 +312,10 @@ const Home = ({ onOpenLogin }: HomeProps) => {
             onChange={(e) => setSortBy(e.target.value as any)}
             className="text-sm border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
+            <option value="recent">Mais Recentes</option>
             <option value="votes">Mais Votadas</option>
             <option value="time">Tempo Restante</option>
-            <option value="recent">Mais Recentes</option>
+            <option value="alphabetical">Alfabética</option>
           </select>
         </div>
       </div>
@@ -290,11 +334,30 @@ const Home = ({ onOpenLogin }: HomeProps) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
           <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-            Nenhuma ideia encontrada
+            {searchTerm ? 'Nenhuma ideia encontrada' : 'Nenhuma ideia nesta categoria'}
           </h3>
           <p className="text-gray-600 dark:text-gray-400">
-            Que tal criar uma nova ideia para começar?
+            {searchTerm 
+              ? `Não foram encontradas ideias que correspondam a "${searchTerm}". Tente ajustar sua pesquisa.`
+              : filter === 'active' 
+                ? 'Não há ideias com votação ativa no momento.'
+                : filter === 'ended'
+                  ? 'Não há ideias com votação encerrada.'
+                  : filter === 'trending'
+                    ? 'Não há ideias em alta no momento.'
+                    : filter === 'recent'
+                      ? 'Não há ideias recentes.'
+                      : 'Que tal criar uma nova ideia para começar?'
+            }
           </p>
+          {searchTerm && (
+            <button
+              onClick={() => onSearchChange?.('')}
+              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Limpar pesquisa
+            </button>
+          )}
         </div>
       )}
     </div>

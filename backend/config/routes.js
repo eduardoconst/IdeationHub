@@ -9,10 +9,28 @@ module.exports = app => {
 
 
 // rotas de usuario
+    // Primeiro, rotas específicas de usuário (devem vir antes da rota genérica /users)
+    
+    // Atualizar dados do perfil (nome)
+    app.route('/users/profile')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .put(app.api.user.updateProfile) // usuário pode atualizar seu próprio perfil
+
+    // Alterar senha
+    app.route('/users/password')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .put(app.api.user.changePassword) // usuário pode alterar sua própria senha
+
+    // Deletar própria conta
+    app.route('/users/account')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .delete(app.api.user.deleteOwnAccount) // usuário pode deletar sua própria conta
+
     // Rota para buscar total de usuários cadastrados (pública para estatísticas)
     app.route('/users/total-count')
         .get(app.api.user.getTotalUsers) // Público para mostrar estatísticas
 
+    // Rotas genéricas de usuário (admin apenas)
     app.route('/users')
         .all(app.config.passport.authenticate()) // autentica o token
         .post(app.api.user.save) 
@@ -108,5 +126,18 @@ module.exports = app => {
         .all(app.config.passport.authenticate()) // autentica o token
         .post(admin(app.api.admin.createBackup)) // criar backup do sistema
 
+// rotas de perfil do usuário
+    // Teste de autenticação
+    app.route('/test/auth')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get((req, res) => {
+            console.log('🧪 Teste de autenticação');
+            console.log('👤 req.user:', req.user);
+            res.json({ 
+                message: 'Autenticação funcionando!', 
+                user: req.user,
+                timestamp: new Date()
+            });
+        })
 
 };

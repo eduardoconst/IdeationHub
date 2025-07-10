@@ -338,9 +338,6 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Tipo
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Criado em
-                  </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Ações
                   </th>
@@ -376,9 +373,6 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
                       }`}>
                         {userItem.admin ? '🛡️ Admin' : '👤 Usuário'}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                      {userItem.created_at ? new Date(userItem.created_at).toLocaleDateString('pt-BR') : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                       {userItem.id !== user?.id && (
@@ -490,7 +484,7 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white dark:bg-gray-900 rounded-lg max-w-7xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>

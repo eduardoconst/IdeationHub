@@ -115,7 +115,136 @@ module.exports = app => {
         }
     }
 
+    // Função para atualizar apenas o perfil do usuário (nome)
+    const updateProfile = async (req, res) => {
+        console.log('🔄 Tentativa de atualizar perfil');
+        console.log('📄 Body da requisição:', req.body);
+        console.log('👤 Usuário autenticado:', req.user);
+        
+        const { name } = req.body;
+        const userId = req.user?.id; // Obtém o ID do usuário logado
+
+        try {
+            if (!userId) {
+                console.log('❌ ID do usuário não encontrado no token');
+                return res.status(401).send('Usuário não autenticado');
+            }
+
+            existsOrError(name, 'Nome não informado');
+            
+            if (name.trim().length < 2) {
+                return res.status(400).send('Nome deve ter pelo menos 2 caracteres');
+            }
+
+            console.log(`🔧 Atualizando usuário ID ${userId} com nome: ${name.trim()}`);
+
+            const rowsUpdated = await app.db('users')
+                .update({ name: name.trim() })
+                .where({ id: userId })
+                .whereNull('deleted_at');
+
+            console.log(`✅ Linhas atualizadas: ${rowsUpdated}`);
+
+            existsOrError(rowsUpdated, 'Usuário não encontrado');
+
+            // Busca os dados atualizados do usuário
+            const updatedUser = await app.db('users')
+                .select('id', 'name', 'email', 'admin')
+                .where({ id: userId })
+                .whereNull('deleted_at')
+                .first();
+
+            console.log('📋 Dados do usuário atualizado:', updatedUser);
+
+            res.json(updatedUser);
+        } catch (msg) {
+            console.log('❌ Erro ao atualizar perfil:', msg);
+            return res.status(400).send(msg);
+        }
+    };
+
+    // Função para alterar senha do usuário
+    const changePassword = async (req, res) => {
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+        const userId = req.user.id;
+
+        try {
+            existsOrError(currentPassword, 'Senha atual não informada');
+            existsOrError(newPassword, 'Nova senha não informada');
+            existsOrError(confirmPassword, 'Confirmação de senha não informada');
+            equalsOrError(newPassword, confirmPassword, 'Senhas não conferem');
+
+            if (newPassword.length < 6) {
+                return res.status(400).send('Nova senha deve ter pelo menos 6 caracteres');
+            }
+
+            // Busca o usuário atual para verificar a senha
+            const user = await app.db('users')
+                .where({ id: userId })
+                .whereNull('deleted_at')
+                .first();
+
+            existsOrError(user, 'Usuário não encontrado');
+
+            // Verifica se a senha atual está correta
+            const isValidPassword = bcrpt.compareSync(currentPassword, user.password);
+            if (!isValidPassword) {
+                return res.status(400).send('Senha atual incorreta');
+            }
+
+            // Verifica se a nova senha é diferente da atual
+            const isSamePassword = bcrpt.compareSync(newPassword, user.password);
+            if (isSamePassword) {
+                return res.status(400).send('A nova senha deve ser diferente da atual');
+            }
+
+            // Criptografa a nova senha
+            const encryptedPassword = encryptPassword(newPassword);
+
+            // Atualiza a senha no banco
+            const rowsUpdated = await app.db('users')
+                .update({ password: encryptedPassword })
+                .where({ id: userId })
+                .whereNull('deleted_at');
+
+            existsOrError(rowsUpdated, 'Erro ao atualizar senha');
+
+            res.status(204).send();
+        } catch (msg) {
+            return res.status(400).send(msg);
+        }
+    };
+
+    // Função para deletar a própria conta
+    const deleteOwnAccount = async (req, res) => {
+        const userId = req.user.id;
+
+        try {
+            // Verifica se o usuário tem cards com votação ativa
+            const activeCards = await app.db('cards')
+                .where({ userID: userId })
+                .where('voting_end', '>', new Date())
+                .andWhere('status', 'active');
+
+            if (activeCards && activeCards.length > 0) {
+                return res.status(400).send('Você possui ideias com votação ainda em aberto. Aguarde o término das votações para deletar sua conta.');
+            }
+
+            // Soft delete do usuário
+            const rowsDeleted = await app.db('users')
+                .update({ deleted_at: new Date() })
+                .where({ id: userId })
+                .whereNull('deleted_at');
+
+            existsOrError(rowsDeleted, 'Usuário não encontrado');
+
+            res.status(204).send();
+        } catch (msg) {
+            return res.status(400).send(msg);
+        }
+    };
+
 
     // Retorna as funções save e get
-    return { save, get , getById , remove , getTotalUsers } 
+    return { save, get , getById , remove , getTotalUsers , updateProfile , changePassword , deleteOwnAccount } 
 }

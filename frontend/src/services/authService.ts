@@ -33,6 +33,18 @@ export interface UserResponse {
   token?: string;
 }
 
+// Interface para atualização de perfil
+export interface UpdateProfileData {
+  name: string;
+}
+
+// Interface para mudança de senha
+export interface ChangePasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 /**
  * Cadastra um novo usuário
  */
@@ -132,5 +144,103 @@ export const getCurrentUser = async (): Promise<UserResponse | null> => {
     console.error('❌ Erro ao validar token:', error);
     logout(); // Remove token inválido
     return null;
+  }
+};
+
+/**
+ * Atualiza dados do perfil do usuário
+ */
+export const updateUserProfile = async (userData: UpdateProfileData): Promise<UserResponse> => {
+  try {
+    const response = await api.put('/users/profile', userData);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erro ao atualizar perfil:', error);
+    
+    if (error.response?.status === 403) {
+      throw new Error('Acesso negado. Faça login novamente.');
+    }
+    
+    if (error.response?.status === 401) {
+      throw new Error('Não autorizado. Faça login novamente.');
+    }
+    
+    if (error.response?.data) {
+      // Se o backend retorna string diretamente
+      if (typeof error.response.data === 'string') {
+        throw new Error(error.response.data);
+      }
+      // Se o backend retorna objeto com message
+      if (error.response.data.message) {
+        throw new Error(error.response.data.message);
+      }
+    }
+    
+    throw new Error('Erro ao atualizar perfil. Tente novamente.');
+  }
+};
+
+/**
+ * Altera a senha do usuário
+ */
+export const changePassword = async (passwordData: ChangePasswordData): Promise<void> => {
+  try {
+    await api.put('/users/password', passwordData);
+  } catch (error: any) {
+    console.error('Erro ao alterar senha:', error);
+    
+    if (error.response?.status === 403) {
+      throw new Error('Acesso negado. Faça login novamente.');
+    }
+    
+    if (error.response?.status === 401) {
+      throw new Error('Não autorizado. Faça login novamente.');
+    }
+    
+    if (error.response?.data) {
+      // Se o backend retorna string diretamente
+      if (typeof error.response.data === 'string') {
+        throw new Error(error.response.data);
+      }
+      // Se o backend retorna objeto com message
+      if (error.response.data.message) {
+        throw new Error(error.response.data.message);
+      }
+    }
+    
+    throw new Error('Erro ao alterar senha. Verifique sua senha atual.');
+  }
+};
+
+/**
+ * Deleta a conta do usuário
+ */
+export const deleteAccount = async (): Promise<void> => {
+  try {
+    await api.delete('/users/account');
+    logout(); // Remove token após deletar conta
+  } catch (error: any) {
+    console.error('Erro ao deletar conta:', error);
+    
+    if (error.response?.status === 403) {
+      throw new Error('Acesso negado. Faça login novamente.');
+    }
+    
+    if (error.response?.status === 401) {
+      throw new Error('Não autorizado. Faça login novamente.');
+    }
+    
+    if (error.response?.data) {
+      // Se o backend retorna string diretamente
+      if (typeof error.response.data === 'string') {
+        throw new Error(error.response.data);
+      }
+      // Se o backend retorna objeto com message
+      if (error.response.data.message) {
+        throw new Error(error.response.data.message);
+      }
+    }
+    
+    throw new Error('Erro ao deletar conta. Tente novamente.');
   }
 };
