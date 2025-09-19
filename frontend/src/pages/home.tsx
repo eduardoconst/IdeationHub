@@ -18,6 +18,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import IdeaCard from '../components/IdeaCard';
+import IdeaReportModal from '../components/IdeaReportModal';
 import { getCards, Card, getTotalPositiveVotes, getTotalUsers } from '../services/cardService';
 // import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
@@ -38,6 +39,8 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
   const [error, setError] = useState<string | null>(null);
   const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
   const [totalUsers, setTotalUsers] = useState<number>(0);
+  const [isIdeaReportModalOpen, setIsIdeaReportModalOpen] = useState(false);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null);
   const { preferences } = useUserPreferences();
 
   
@@ -118,6 +121,16 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
       
       return updatedIdeas;
     });
+  };
+
+  const handleOpenReport = (ideaId: number) => {
+    setSelectedIdeaId(ideaId);
+    setIsIdeaReportModalOpen(true);
+  };
+
+  const handleCloseReport = () => {
+    setIsIdeaReportModalOpen(false);
+    setSelectedIdeaId(null);
   };
 
   // Loading state
@@ -323,7 +336,12 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
       {/* Ideas List */}
       <div className="space-y-4">
         {sortedIdeas.map((idea) => (
-          <IdeaCard key={idea.id} idea={idea} onVoteUpdate={handleVoteUpdate} />
+          <IdeaCard 
+            key={idea.id} 
+            idea={idea} 
+            onVoteUpdate={handleVoteUpdate}
+            onOpenReport={handleOpenReport}
+          />
         ))}
       </div>
 
@@ -359,6 +377,15 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
             </button>
           )}
         </div>
+      )}
+
+      {/* Idea Report Modal */}
+      {selectedIdeaId && (
+        <IdeaReportModal
+          isOpen={isIdeaReportModalOpen}
+          onClose={handleCloseReport}
+          ideaId={selectedIdeaId}
+        />
       )}
     </div>
   );

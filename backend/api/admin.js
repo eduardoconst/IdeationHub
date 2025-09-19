@@ -68,7 +68,8 @@ module.exports = app => {
      */
     const getAllUsers = async (req, res) => {
         try {
-            console.log('🔄 Buscando todos os usuários...');        const users = await app.db('users')
+            console.log('🔄 Buscando todos os usuários...');        
+            const users = await app.db('users')
             .select('id', 'name', 'email', 'admin', 'deleted_at')
             .whereNull('deleted_at')
             .orderBy('id', 'desc');

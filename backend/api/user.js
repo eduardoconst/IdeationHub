@@ -65,13 +65,28 @@ module.exports = app => {
     
     // Função que busca um usuário por id
     const getById = (req, res) => { 
+        const userId = req.params.id;
+        
+        // Validação do parâmetro ID
+        if (!userId || isNaN(userId) || userId <= 0) {
+            return res.status(400).json({ error: 'ID de usuário inválido' });
+        }
+        
         app.db('users')
             .select('id', 'name', 'email', 'admin')
-            .where({ id: req.params.id })
+            .where({ id: parseInt(userId) })
             .whereNull('deleted_at') // Busca apenas usuários que não foram excluídos
             .first()
-            .then(user => res.json(user))
-            .catch(err => res.status(500).send(err))
+            .then(user => {
+                if (!user) {
+                    return res.status(404).json({ error: 'Usuário não encontrado' });
+                }
+                res.json(user);
+            })
+            .catch(err => {
+                console.error('Erro ao buscar usuário por ID:', err);
+                res.status(500).json({ error: 'Erro interno do servidor' });
+            });
     }
 
     // Função que busca o total de usuários cadastrados
@@ -92,26 +107,46 @@ module.exports = app => {
 
     const remove = async (req, res) => { 
         try{
+            const userId = req.params.id;
+            
+            // Validação do parâmetro ID
+            if (!userId || isNaN(userId) || userId <= 0) {
+                return res.status(400).json({ error: 'ID de usuário inválido' });
+            }
+            
+            const parsedUserId = parseInt(userId);
+            
+            // Verifica se o usuário existe antes de tentar remover
+            const userExists = await app.db('users')
+                .where({ id: parsedUserId })
+                .whereNull('deleted_at')
+                .first();
+                
+            if (!userExists) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
+            
             // Busca os cartões do usuário que ainda estão com votação em aberto
             const activeCards = await app.db('cards') 
-                .where({ userID: req.params.id })
+                .where({ userID: parsedUserId })
                 .where('voting_end', '>', new Date()) // Verifica se a data de término da votação é maior que agora
                 .andWhere('status', 'active') // Verifica se o status do card está ativo
             
             if(activeCards && activeCards.length > 0) {
-                return res.status(400).send('Usuário possui cards com votação ainda em aberto')
+                return res.status(400).json({ error: 'Usuário possui cards com votação ainda em aberto' });
             }
 
             const rowsDeleted = await app.db('users') // Exclui o usuário
                 .update({ deleted_at: new Date() }) // Define a data de exclusão
-                .where({ id: req.params.id }) // Filtra pelo id do usuário
+                .where({ id: parsedUserId }) // Filtra pelo id do usuário
                 .whereNull('deleted_at') // Garante que o usuário não foi excluído anteriormente
             
             existsOrError(rowsDeleted, 'Usuário não foi encontrado') // Verifica se o usuário foi encontrado
 
             res.status(204).send() // Retorna status 204 se a exclusão for bem sucedida
         } catch(msg) {
-            return res.status(400).send(msg) // Retorna status 400 se houver erro
+            console.error('Erro ao remover usuário:', msg);
+            return res.status(400).json({ error: typeof msg === 'string' ? msg : 'Erro ao remover usuário' });
         }
     }
 
@@ -127,16 +162,30 @@ module.exports = app => {
         try {
             if (!userId) {
                 console.log('❌ ID do usuário não encontrado no token');
-                return res.status(401).send('Usuário não autenticado');
+                return res.status(401).json({ error: 'Usuário não autenticado' });
             }
 
             existsOrError(name, 'Nome não informado');
             
             if (name.trim().length < 2) {
-                return res.status(400).send('Nome deve ter pelo menos 2 caracteres');
+                return res.status(400).json({ error: 'Nome deve ter pelo menos 2 caracteres' });
+            }
+            
+            if (name.trim().length > 100) {
+                return res.status(400).json({ error: 'Nome deve ter no máximo 100 caracteres' });
             }
 
             console.log(`🔧 Atualizando usuário ID ${userId} com nome: ${name.trim()}`);
+
+            // Verifica se o usuário existe antes de atualizar
+            const userExists = await app.db('users')
+                .where({ id: userId })
+                .whereNull('deleted_at')
+                .first();
+                
+            if (!userExists) {
+                return res.status(404).json({ error: 'Usuário não encontrado' });
+            }
 
             const rowsUpdated = await app.db('users')
                 .update({ name: name.trim() })
@@ -159,7 +208,7 @@ module.exports = app => {
             res.json(updatedUser);
         } catch (msg) {
             console.log('❌ Erro ao atualizar perfil:', msg);
-            return res.status(400).send(msg);
+            return res.status(400).json({ error: typeof msg === 'string' ? msg : 'Erro ao atualizar perfil' });
         }
     };
 

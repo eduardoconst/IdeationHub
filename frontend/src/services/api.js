@@ -2,13 +2,28 @@
 
 import axios from 'axios';
 
+// Detecta automaticamente se está acessando via rede ou localhost
+const getApiBaseURL = () => {
+  const hostname = window.location.hostname;
+  
+  // Se estiver acessando via IP da rede, usa o mesmo IP para o backend
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:4000`;
+  }
+  
+  // Caso contrário, usa localhost
+  return 'http://localhost:4000';
+};
+
 const api = axios.create({
-  baseURL: 'http://localhost:4000', // Porta correta do backend
+  baseURL: getApiBaseURL(),
   timeout: 10000, // 10 segundos de timeout
   headers: {
     'Content-Type': 'application/json'
   }
 });
+
+console.log('🌐 API configurada para:', getApiBaseURL());
 
 // Interceptador para adicionar token de autenticação automaticamente
 api.interceptors.request.use(

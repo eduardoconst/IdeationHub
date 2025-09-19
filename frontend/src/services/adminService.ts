@@ -102,21 +102,6 @@ export const refreshSystemData = async (): Promise<void> => {
 };
 
 /**
- * Exporta dados do sistema
- */
-export const exportSystemData = async (): Promise<Blob> => {
-  try {
-    const response = await api.get('/admin/export', {
-      responseType: 'blob'
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error('Erro ao exportar dados:', error);
-    throw new Error(error.response?.data?.message || 'Erro ao exportar dados');
-  }
-};
-
-/**
  * Limpa dados antigos do sistema
  */
 export const cleanupOldData = async (): Promise<void> => {
@@ -125,17 +110,5 @@ export const cleanupOldData = async (): Promise<void> => {
   } catch (error: any) {
     console.error('Erro ao limpar dados:', error);
     throw new Error(error.response?.data?.message || 'Erro ao limpar dados');
-  }
-};
-
-/**
- * Cria backup do sistema
- */
-export const createSystemBackup = async (): Promise<void> => {
-  try {
-    await api.post('/admin/backup');
-  } catch (error: any) {
-    console.error('Erro ao criar backup:', error);
-    throw new Error(error.response?.data?.message || 'Erro ao criar backup');
   }
 };

@@ -20,7 +20,7 @@ O **IdeationHub** é uma plataforma colaborativa onde usuários podem:
 - Votar em ideias de outros usuários (👍/👎)
 - Visualizar rankings das ideias mais populares
 - Definir tempo limite para votação de cada ideia
-- Interagir em uma interface moderna estilo Twitter/X
+- Interagir em uma interface moderna
 
 ### Objetivo
 Facilitar a coleta, avaliação e priorização de ideias em comunidades, empresas ou grupos de trabalho.
@@ -31,7 +31,6 @@ Facilitar a coleta, avaliação e priorização de ideias em comunidades, empres
 - **React 19.1.0** - Biblioteca para interfaces de usuário
 - **TypeScript 4.9.5** - Superset tipado do JavaScript
 - **Tailwind CSS 3.4.1** - Framework CSS utilitário
-- **Vite** - Build tool moderna e rápida
 - **Axios** - Cliente HTTP para requisições à API
 
 ### Backend
@@ -59,7 +58,7 @@ Facilitar a coleta, avaliação e priorização de ideias em comunidades, empres
 - [x] **Modal de Login** - Interface limpa com validação
 - [x] **Modal de Cadastro** - Formulário completo com verificações
 - [x] **Validação de Formulários** - Feedback em tempo real
-- [ ] **Autenticação JWT** - Sistema seguro de tokens
+- [x] **Autenticação JWT** - Sistema seguro de tokens
 - [ ] **Recuperação de Senha** - Reset via email
 
 ### 💡 Gerenciamento de Ideias
@@ -81,43 +80,76 @@ Facilitar a coleta, avaliação e priorização de ideias em comunidades, empres
 
 ```
 IdeationHub/
+├── .github/                   # Configurações do GitHub
+├── .gitignore                 # Arquivos ignorados pelo Git
 ├── frontend/                  # Aplicação React
 │   ├── public/               # Arquivos estáticos
+│   │   └── index.html        # Template HTML principal
 │   ├── src/
 │   │   ├── components/       # Componentes reutilizáveis
-│   │   │   ├── IdeaCard.tsx         # Card de ideia individual
-│   │   │   ├── Navbar.tsx           # Barra de navegação
-│   │   │   ├── LoginModal.tsx       # Modal de login
-│   │   │   ├── SignupModal.tsx      # Modal de cadastro
-│   │   │   └── CreateIdeaModal.tsx  # Modal de criação
-│   │   ├── pages/            # Páginas da aplicação
-│   │   │   └── Home.tsx             # Página principal
+│   │   │   ├── AdminCenterModal.tsx     # Modal do centro administrativo
+│   │   │   ├── CreateIdeaModal.tsx      # Modal de criação de ideias
+│   │   │   ├── IdeaCard.tsx             # Card de ideia individual
+│   │   │   ├── LoginModal.tsx           # Modal de login
+│   │   │   ├── Navbar.tsx               # Barra de navegação
+│   │   │   ├── ProfileModal.tsx         # Modal de perfil do usuário
+│   │   │   ├── SettingsModal.tsx        # Modal de configurações
+│   │   │   ├── SettingsProfile.tsx      # Configurações do perfil
+│   │   │   └── SignupModal.tsx          # Modal de cadastro
 │   │   ├── context/          # Contextos React
-│   │   │   └── AuthContext.tsx      # Contexto de autenticação
+│   │   │   └── AuthContext.tsx          # Contexto de autenticação
+│   │   ├── hooks/            # Hooks personalizados
+│   │   │   ├── useLocalStorage.ts       # Hook para localStorage
+│   │   │   └── useUserPreferences.ts    # Hook para preferências
+│   │   ├── pages/            # Páginas da aplicação
+│   │   │   └── Home.tsx                 # Página principal
 │   │   ├── services/         # Serviços e APIs
-│   │   │   └── api.js               # Cliente Axios
+│   │   │   ├── adminService.ts          # Serviços administrativos
+│   │   │   ├── api.js                   # Cliente Axios
+│   │   │   ├── authService.ts           # Serviços de autenticação
+│   │   │   └── cardService.ts           # Serviços de cards/ideias
+│   │   ├── assets/           # Recursos estáticos (imagens, ícones)
 │   │   ├── App.tsx           # Componente principal
 │   │   ├── index.tsx         # Ponto de entrada
 │   │   └── index.css         # Estilos globais (Tailwind)
+│   ├── .gitignore            # Arquivos ignorados (frontend)
 │   ├── package.json          # Dependências do frontend
-│   ├── tailwind.config.js    # Configuração do Tailwind
+│   ├── postcss.config.js     # Configuração do PostCSS
+│   ├── tailwind.config.js    # Configuração do Tailwind CSS
 │   └── tsconfig.json         # Configuração do TypeScript
 ├── backend/                  # API Node.js
 │   ├── api/                  # Rotas da API
-│   │   ├── auth.js                  # Autenticação
-│   │   ├── card.js                  # CRUD de ideias
-│   │   ├── user.js                  # Usuários
-│   │   ├── vote.js                  # Sistema de votação
-│   │   └── validation.js            # Validações
+│   │   ├── admin.js                     # Rotas administrativas
+│   │   ├── auth.js                      # Autenticação
+│   │   ├── card.js                      # CRUD de ideias
+│   │   ├── user.js                      # Usuários
+│   │   ├── validation.js                # Validações
+│   │   └── vote.js                      # Sistema de votação
 │   ├── config/               # Configurações
-│   │   ├── db.js                    # Conexão com banco
-│   │   ├── passport.js              # Estratégias de autenticação
-│   │   └── routes.js                # Registro de rotas
+│   │   ├── admin.js                     # Configurações administrativas
+│   │   ├── db.js                        # Conexão com banco
+│   │   ├── middlewares.js               # Middlewares Express
+│   │   ├── passport.js                  # Estratégias de autenticação
+│   │   └── routes.js                    # Registro de rotas
 │   ├── migrations/           # Migrações do banco
-│   ├── tests/               # Testes automatizados
-│   ├── package.json         # Dependências do backend
-│   └── index.js             # Servidor principal
-└── README.md                # Documentação do projeto
+│   │   ├── 20240610120000_add_showVotes_to_votes.js
+│   │   ├── 20250317173421_create_table_users.js
+│   │   ├── 20250317173523_create_table_card.js
+│   │   ├── 20250324133650_create_table_votes.js
+│   │   ├── 20250627123535_add_deleted_at_table_users.js
+│   │   ├── 20250702000000_alter_card_content_to_text.js
+│   │   ├── 20250702171628_add_created_at_to_users.js
+│   │   └── 20250702171636_add_created_at_to_users.js
+│   ├── tests/                # Testes automatizados
+│   │   └── database.test.js             # Testes do banco de dados
+│   ├── .env                  # Variáveis de ambiente (não versionado)
+│   ├── index.js              # Servidor principal
+│   ├── knexfile.js           # Configuração do Knex.js
+│   ├── package.json          # Dependências do backend
+│   ├── readme.md             # Documentação específica do backend
+│   ├── test-admin-functions.js # Testes das funções administrativas
+│   └── test-admin.js         # Testes administrativos
+└── README.md                 # Documentação principal do projeto
 ```
 
 ## 🛠️ Instalação e Configuração
@@ -165,15 +197,15 @@ npm run dev
 ```
 
 ### 4. Acessar a aplicação
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+- Frontend: http://localhost:4000
+- Backend API: http://localhost:3000
 
 ## 💻 Como Usar
 
 ### Para Usuários
 
 1. **Acessar a Plataforma**
-   - Abra o navegador em http://localhost:3000
+   - Abra o navegador em http://localhost:4000
    - A página inicial mostra todas as ideias ativas
 
 2. **Criar uma Conta**
@@ -202,18 +234,16 @@ npm run dev
 
 **Frontend:**
 ```bash
-npm run dev        # Servidor de desenvolvimento
-npm run build      # Build de produção
-npm run preview    # Preview da build
-npm run lint       # Verificar código
+npm start     
+npm run build      
+npm run preview    
 ```
 
 **Backend:**
 ```bash
-npm run dev        # Servidor com nodemon
-npm start          # Servidor de produção
-npm run migrate    # Executar migrações
-npm test           # Executar testes
+npm start          
+npm run migrate    
+npm test           
 ```
 
 ## 🔌 API Endpoints
@@ -314,7 +344,7 @@ Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para de
 
 ## 👥 Autores
 
-- **Eduardo Ferreira** - *Desenvolvimento inicial* - [@EduardoFerreiraConst](https://github.com/EduardoFerreiraConst)
+- **Eduardo Ferreira** - *Desenvolvimento inicial* - [@eduardoconst](https://github.com/eduardoconst)
 
 ## 🙏 Agradecimentos
 

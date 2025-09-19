@@ -140,4 +140,35 @@ module.exports = app => {
             });
         })
 
+// rotas de relatórios
+    // Relatório do dashboard (só admins)
+    app.route('/api/reports/dashboard')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.reports.getDashboardMetrics)) // só admin pode acessar
+
+    // Relatório de usuários (só admins)
+    app.route('/api/reports/users')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.reports.getUsersReport)) // só admin pode acessar
+
+    // Relatório de ideias (só admins)
+    app.route('/api/reports/ideas')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.reports.getIdeasReport)) // só admin pode acessar
+
+    // Relatório de engajamento (só admins)
+    app.route('/api/reports/engagement')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.reports.getEngagementReport)) // só admin pode acessar
+
+    // Relatório pessoal do usuário
+    app.route('/api/reports/personal')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(app.api.reports.getUserPersonalReport) // usuário logado pode acessar
+
+    // Relatório específico de uma ideia (só admins)
+    app.route('/api/reports/idea/:id')
+        .all(app.config.passport.authenticate()) // autentica o token
+        .get(admin(app.api.reports.getIdeaReport)) // só admin pode acessar
+
 };

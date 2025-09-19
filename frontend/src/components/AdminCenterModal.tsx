@@ -7,9 +7,7 @@ import {
   demoteUser, 
   deleteUser,
   refreshSystemData,
-  exportSystemData,
   cleanupOldData,
-  createSystemBackup,
   AdminStats,
   AdminUser
 } from '../services/adminService';
@@ -21,7 +19,7 @@ interface AdminCenterModalProps {
 }
 
 const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'ideas' | 'system'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users'>('dashboard');
   const [stats, setStats] = useState<AdminStats>({
     totalUsers: 0,
     totalIdeas: 0,
@@ -99,29 +97,10 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
           console.log('✅ Dados atualizados com sucesso');
           break;
           
-        case 'export_data':
-          const blob = await exportSystemData();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-          a.download = `ideationhub-export-${new Date().toISOString().split('T')[0]}.json`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-          console.log('✅ Dados exportados com sucesso');
-          break;
-          
         case 'cleanup_old_votes':
           await cleanupOldData();
           await loadAdminStats();
           console.log('✅ Limpeza realizada com sucesso');
-          break;
-          
-        case 'system_backup':
-          await createSystemBackup();
-          console.log('✅ Backup criado com sucesso');
           break;
           
         default:
@@ -201,17 +180,6 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
           </button>
           
           <button
-            onClick={() => handleQuickAction('export_data')}
-            disabled={isLoading}
-            className="flex items-center p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-5 h-5 text-green-600 dark:text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="text-green-700 dark:text-green-300">Exportar Dados</span>
-          </button>
-          
-          <button
             onClick={() => handleQuickAction('cleanup_old_votes')}
             disabled={isLoading}
             className="flex items-center p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -220,17 +188,6 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             <span className="text-orange-700 dark:text-orange-300">Limpar Dados Antigos</span>
-          </button>
-          
-          <button
-            onClick={() => handleQuickAction('system_backup')}
-            disabled={isLoading}
-            className="flex items-center p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-5 h-5 text-purple-600 dark:text-purple-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-            </svg>
-            <span className="text-purple-700 dark:text-purple-300">Backup Sistema</span>
           </button>
         </div>
       </div>
@@ -456,31 +413,7 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
     );
   };
 
-  const renderIdeas = () => (
-    <div className="space-y-4">
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-        💡 Gerenciar Ideias
-      </h3>
-      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-        <p className="text-gray-600 dark:text-gray-400">
-          Funcionalidades de gerenciamento de ideias em desenvolvimento...
-        </p>
-      </div>
-    </div>
-  );
-
-  const renderSystem = () => (
-    <div className="space-y-4">
-      <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-        ⚙️ Configurações do Sistema
-      </h3>
-      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-        <p className="text-gray-600 dark:text-gray-400">
-          Configurações avançadas do sistema em desenvolvimento...
-        </p>
-      </div>
-    </div>
-  );
+  
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -530,10 +463,8 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-700">
           {[
-            { key: 'dashboard', label: '📊 Dashboard', icon: '📊' },
-            { key: 'users', label: '👥 Usuários', icon: '👥' },
-            { key: 'ideas', label: '💡 Ideias', icon: '💡' },
-            { key: 'system', label: '⚙️ Sistema', icon: '⚙️' }
+            { key: 'dashboard', label: '📊 Dashboard' },
+            { key: 'users', label: '👥 Usuários' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -553,8 +484,6 @@ const AdminCenterModal = ({ isOpen, onClose, onAction }: AdminCenterModalProps) 
         <div className="p-6 max-h-[60vh] overflow-y-auto">
           {activeTab === 'dashboard' && renderDashboard()}
           {activeTab === 'users' && renderUsers()}
-          {activeTab === 'ideas' && renderIdeas()}
-          {activeTab === 'system' && renderSystem()}
         </div>
 
         {/* Footer */}

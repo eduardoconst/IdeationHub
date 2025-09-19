@@ -7,9 +7,10 @@ import { useAuth } from '../context/AuthContext';
 interface IdeaProps {
   idea: Card;
   onVoteUpdate?: (cardId: number, newVotes: { yes: number; no: number }) => void;
+  onOpenReport?: (ideaId: number) => void;
 }
 
-const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
+const IdeaCard = ({ idea, onVoteUpdate, onOpenReport }: IdeaProps) => {
   const { user, isLoggedIn } = useAuth();
   const [isVoting, setIsVoting] = useState(false);
   const [userVote, setUserVote] = useState<boolean | null>(null);
@@ -221,6 +222,19 @@ const IdeaCard = ({ idea, onVoteUpdate }: IdeaProps) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
             </svg>
           </button>
+
+          {/* Report Button - Only for Admins */}
+          {user?.admin && onOpenReport && (
+            <button
+              onClick={() => onOpenReport(idea.id)}
+              title="Ver relatório da ideia"
+              className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-3 py-2 rounded-lg transition-colors duration-200"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Percentage of positive votes */}

@@ -12,6 +12,19 @@ module.exports = app => {
     const strategy = new Strategy(params,(payload, done) => {
         console.log('🔍 Passport - Token payload recebido:', payload);
         
+        // Validação básica do payload
+        if (!payload || !payload.id) {
+            console.log('❌ Passport - Payload inválido (sem ID)');
+            return done(null, false);
+        }
+        
+        // Validação de expiração do token
+        const now = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < now) {
+            console.log('❌ Passport - Token expirado');
+            return done(null, false);
+        }
+        
         app.db('users')
             .where({id: payload.id})
             .whereNull('deleted_at') // Adiciona verificação de usuários não deletados
