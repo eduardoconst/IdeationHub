@@ -86,12 +86,29 @@ export interface ReportVote {
 
 // Interface para dados do relatório de ideia
 export interface IdeaReportData {
-  cardId: number;
-  cardTitle: string;
-  totalVotes: number;
-  positiveVotes: number;
-  negativeVotes: number;
-  votes: ReportVote[];
+  idea: {
+    id: number;
+    title: string;
+    content: string;
+    created_at: string;
+    author_name: string;
+    positive_votes: number;
+    negative_votes: number;
+    total_votes: number;
+  };
+  votes: Array<{
+    id: number;
+    vote: boolean;
+    created_at: string;
+    showVotes: boolean;
+    user_name: string;
+    user_email: string;
+  }>;
+  votesBreakdown: {
+    positive: number;
+    negative: number;
+    total: number;
+  };
 }
 
 // Função para buscar métricas do dashboard

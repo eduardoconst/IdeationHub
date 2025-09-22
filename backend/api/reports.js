@@ -38,8 +38,8 @@ module.exports = app => {
       // Top 5 ideias mais votadas
       const topIdeas = await knex('cards as c')
         .select('c.id', 'c.title', 'u.name as author_name')
-        .join('users as u', 'c.user_id', 'u.id')
-        .leftJoin('votes as v', 'c.id', 'v.card_id')
+        .join('users as u', 'c.userID', 'u.id')
+        .leftJoin('votes as v', 'c.id', 'v.cardID')
         .whereNull('c.deleted_at')
         .groupBy('c.id', 'c.title', 'u.name')
         .orderBy(knex.raw('COUNT(v.id)'), 'desc')
@@ -49,8 +49,8 @@ module.exports = app => {
       // Top 5 usuários mais ativos
       const topUsers = await knex('users as u')
         .select('u.id', 'u.name', 'u.email')
-        .leftJoin('cards as c', 'u.id', 'c.user_id')
-        .leftJoin('votes as v', 'u.id', 'v.user_id')
+        .leftJoin('cards as c', 'u.id', 'c.userID')
+        .leftJoin('votes as v', 'u.id', 'v.userID')
         .whereNull('u.deleted_at')
         .groupBy('u.id', 'u.name', 'u.email')
         .orderBy(knex.raw('COUNT(c.id) + COUNT(v.id)'), 'desc')
@@ -106,9 +106,9 @@ module.exports = app => {
           knex.raw('COUNT(DISTINCT v.id) as votes_count')
         )
         .leftJoin('cards as c', function() {
-          this.on('u.id', 'c.user_id').andOn('c.deleted_at', 'IS', knex.raw('NULL'));
+          this.on('u.id', 'c.userID').andOn('c.deleted_at', 'IS', knex.raw('NULL'));
         })
-        .leftJoin('votes as v', 'u.id', 'v.user_id')
+        .leftJoin('votes as v', 'u.id', 'v.userID')
         .whereNull('u.deleted_at')
         .groupBy('u.id', 'u.name', 'u.email', 'u.admin', 'u.created_at')
         .orderBy('u.created_at', 'desc');
@@ -153,18 +153,18 @@ module.exports = app => {
           'c.id',
           'c.title',
           'c.content',
-          'c.created_at',
+          'c.voting_start as created_at',
           'u.name as author_name',
           'u.email as author_email',
           knex.raw('COUNT(CASE WHEN v.vote = ? THEN 1 END) as positive_votes', [true]),
           knex.raw('COUNT(CASE WHEN v.vote = ? THEN 1 END) as negative_votes', [false]),
           knex.raw('COUNT(v.id) as total_votes')
         )
-        .join('users as u', 'c.user_id', 'u.id')
-        .leftJoin('votes as v', 'c.id', 'v.card_id')
-        .whereNull('c.deleted_at')
-        .groupBy('c.id', 'c.title', 'c.content', 'c.created_at', 'u.name', 'u.email')
-        .orderBy('c.created_at', 'desc');
+        .join('users as u', 'c.userID', 'u.id')
+        .leftJoin('votes as v', 'c.id', 'v.cardID')
+        .whereNull('u.deleted_at')
+        .groupBy('c.id', 'c.title', 'c.content', 'c.voting_start', 'u.name', 'u.email')
+        .orderBy('c.voting_start', 'desc');
 
       if (search) {
         query = query.where(function() {
@@ -215,10 +215,10 @@ module.exports = app => {
       // Ideias mais engajadas
       const topEngagedIdeas = await knex('cards as c')
         .select('c.id', 'c.title', 'u.name as author_name')
-        .join('users as u', 'c.user_id', 'u.id')
-        .leftJoin('votes as v', 'c.id', 'v.card_id')
-        .whereNull('c.deleted_at')
-        .where('c.created_at', '>=', daysAgo)
+        .join('users as u', 'c.userID', 'u.id')
+        .leftJoin('votes as v', 'c.id', 'v.cardID')
+        .whereNull('u.deleted_at')
+        .where('c.voting_start', '>=', daysAgo)
         .groupBy('c.id', 'c.title', 'u.name')
         .orderBy(knex.raw('COUNT(v.id)'), 'desc')
         .limit(10)
@@ -227,7 +227,7 @@ module.exports = app => {
       // Usuários mais engajados
       const topEngagedUsers = await knex('users as u')
         .select('u.id', 'u.name', 'u.email')
-        .leftJoin('votes as v', 'u.id', 'v.user_id')
+        .leftJoin('votes as v', 'u.id', 'v.userID')
         .whereNull('u.deleted_at')
         .where('v.created_at', '>=', daysAgo)
         .groupBy('u.id', 'u.name', 'u.email')
@@ -287,16 +287,15 @@ module.exports = app => {
 
       // Estatísticas das ideias do usuário
       const userIdeas = await knex('cards')
-        .select('id', 'title', 'content', 'created_at')
-        .where('user_id', userId)
-        .where('deleted_at', null)
-        .orderBy('created_at', 'desc');
+        .select('id', 'title', 'content', 'voting_start as created_at')
+        .where('userID', userId)
+        .orderBy('voting_start', 'desc');
 
         // Votos dados pelo usuário
         const userVotes = await knex('votes as v')
           .select('v.vote', 'v.created_at', 'c.title as idea_title', 'u.name as author_name')
           .join('cards as c', 'v.cardID', 'c.id')
-          .join('users as u', 'c.user_id', 'u.id')
+          .join('users as u', 'c.userID', 'u.id')
           .where('v.userID', userId)
           .orderBy('v.created_at', 'desc');
 
@@ -305,7 +304,7 @@ module.exports = app => {
           .select('v.vote', 'v.created_at', 'c.title as idea_title', 'u.name as voter_name')
           .join('cards as c', 'v.cardID', 'c.id')
           .join('users as u', 'v.userID', 'u.id')
-          .where('c.user_id', userId)
+          .where('c.userID', userId)
           .orderBy('v.created_at', 'desc');      // Calcular estatísticas das ideias
         const ideasWithStats = await Promise.all(
           userIdeas.map(async (idea) => {
@@ -363,10 +362,9 @@ module.exports = app => {
       
       // Buscar dados da ideia
       const idea = await knex('cards as c')
-        .select('c.id', 'c.title', 'c.content', 'c.created_at', 'u.name as author_name')
-        .join('users as u', 'c.user_id', 'u.id')
+        .select('c.id', 'c.title', 'c.content', 'c.voting_start as created_at', 'u.name as author_name')
+        .join('users as u', 'c.userID', 'u.id')
         .where('c.id', parsedIdeaId)
-        .whereNull('c.deleted_at')
         .whereNull('u.deleted_at')
         .first();
 
