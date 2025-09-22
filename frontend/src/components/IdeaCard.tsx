@@ -224,7 +224,7 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport }: IdeaProps) => {
           </button>
 
           {/* Report Button - Apenas para admins ou criadores do card */}
-          {onOpenReport && (user?.admin || idea.userID === user?.id) && (
+          {onOpenReport && isLoggedIn && (user?.admin || idea.userID === user?.id) && (
             <button
               onClick={() => onOpenReport(idea.id)}
               title="Ver relatório da ideia"

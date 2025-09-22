@@ -41,30 +41,30 @@ jobs:
       - name: Simulando o deploy
         run: echo "Deploy realizado com sucesso!"
         
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v3
+  # docker:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout do código
+  #       uses: actions/checkout@v3
 
-      - name: Listar arquivos no diretório atual
-        run: ls -la
+  #     - name: Listar arquivos no diretório atual
+  #       run: ls -la
 
-      - name: Navegar até o diretório backend
-        run: cd backend
+  #     - name: Navegar até o diretório backend
+  #       run: cd backend
 
-      - name: Build da imagem Docker
-        run: |
-          cd backend
-          docker build -t meu-backend .
+  #     - name: Build da imagem Docker
+  #       run: |
+  #         cd backend
+  #         docker build -t meu-backend .
           
 
-      - name: Rodar o container Docker
-        run: |
-          docker run -d -p 4000:4000 --name meu-container-backend meu-backend
+  #     - name: Rodar o container Docker
+  #       run: |
+  #         docker run -d -p 4000:4000 --name meu-container-backend meu-backend
 
 
-      - name: Verificar se o container está rodando
-        run: |
-          sleep 15
-          docker ps -a
+  #     - name: Verificar se o container está rodando
+  #       run: |
+  #         sleep 15
+  #         docker ps -a
