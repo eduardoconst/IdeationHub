@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ChartComponent from './ChartComponent';
 import { getIdeaReport } from '../services/reportService';
 import { formatDate } from '../services/reportService';
