@@ -10,7 +10,15 @@
  * 
  * Principais funções:
  * - loadCards(): Busca cards do backend
- * - handleVote(): Processa votos e atualiza no backend
+ * - handleVote():            )}
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Home;atualiza no backend
  * - Sistema de filtros: 'all', 'trending', 'recent'
  * - Sistema de ordenação: por votos, tempo ou recência
  * - Cálculo dinâmico de estatísticas vindas do banco
@@ -18,11 +26,13 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import IdeaCard from '../components/IdeaCard';
-import IdeaReportModal from '../components/IdeaReportModal';
 import { getCards, Card, getTotalPositiveVotes, getTotalUsers } from '../services/cardService';
 // import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useUserPreferences } from '../hooks/useUserPreferences';
+import { useNotifications } from '../hooks/useNotifications';
+
+type UseNotificationsReturn = ReturnType<typeof useNotifications>;
 
 
 
@@ -31,17 +41,17 @@ interface HomeProps {
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
   onRefreshRequest?: (refreshFn: () => void) => void;
+  onOpenReport?: (ideaId: number) => void;
+  notifications: UseNotificationsReturn;
 }
 
-const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest }: HomeProps) => {
+const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, onOpenReport, notifications }: HomeProps) => {
   // const { isLoggedIn } = useAuth();
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
   const [totalUsers, setTotalUsers] = useState<number>(0);
-  const [isIdeaReportModalOpen, setIsIdeaReportModalOpen] = useState(false);
-  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null);
   const { preferences } = useUserPreferences();
 
   
@@ -132,13 +142,9 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest }
   };
 
   const handleOpenReport = (ideaId: number) => {
-    setSelectedIdeaId(ideaId);
-    setIsIdeaReportModalOpen(true);
-  };
-
-  const handleCloseReport = () => {
-    setIsIdeaReportModalOpen(false);
-    setSelectedIdeaId(null);
+    if (onOpenReport) {
+      onOpenReport(ideaId);
+    }
   };
 
   const handleCardDeleted = (cardId: number) => {
@@ -362,6 +368,7 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest }
             onVoteUpdate={handleVoteUpdate}
             onOpenReport={handleOpenReport}
             onCardDeleted={handleCardDeleted}
+            notifications={notifications}
           />
         ))}
       </div>
@@ -398,15 +405,6 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest }
             </button>
           )}
         </div>
-      )}
-
-      {/* Idea Report Modal */}
-      {selectedIdeaId && (
-        <IdeaReportModal
-          isOpen={isIdeaReportModalOpen}
-          onClose={handleCloseReport}
-          ideaId={selectedIdeaId}
-        />
       )}
     </div>
   );

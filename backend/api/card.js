@@ -39,30 +39,48 @@ module.exports = app => {
 
     const remove = async (req, res) => { // Função que remove um card
         try {
-            const card = await app.db('cards') // Busca o card no banco de dados
+            // Validação de autenticação
+            if (!req.user || !req.user.id) {
+                return res.status(401).send('Usuário não autenticado.')
+            }
+
+            // Busca o usuário autenticado no banco de dados
+            const user = await app.db('users')  
+                .select('id', 'admin')
+                .where({ id: req.user.id })
+                .whereNull('deleted_at') // Garantir que o usuário não foi deletado
+                .first()
+
+            if (!user) {
+                return res.status(401).send('Usuário não encontrado ou inativo.')
+            }
+
+            // Busca o card no banco de dados
+            const card = await app.db('cards')
                 .where({ id: req.params.id })
                 .first()
 
             existsOrError(card, 'Card não encontrado.') // Verifica se o card foi encontrado
 
-            const now = new Date()
-            const votingEnd = new Date(card.voting_end) // Converte a data de término da votação para o formato Date
+            // VALIDAÇÃO DE SEGURANÇA: Verifica se o usuário é o criador do card ou um administrador
+            // Converte ambos para number para garantir comparação correta
+            const isOwner = Number(user.id) === Number(card.userID)
+            const isAdmin = user.admin === true || user.admin === 1
 
-            // Verifica se a votação ainda está em andamento
-            if (votingEnd > now) {
-                // Busca o usuário no banco de dados
-                const user = await app.db('users')  
-                    .select('id', 'admin')
-                    .where({ id: req.user.id }) // `req.user.id` deve conter o ID do usuário autenticado
-                    .first()
-
-                existsOrError(user, 'Usuário não encontrado.') // Verifica se o usuário foi encontrado
-
-                // Verifica se o usuário é o criador do card ou um administrador
-                if (user.id !== card.userID && !user.admin) {
-                    return res.status(403).send('Você não tem permissão para excluir este card.')
-                }
+            if (!isOwner && !isAdmin) {
+                return res.status(403).send('Você não tem permissão para excluir este card. Apenas o criador ou administradores podem excluir.')
             }
+
+            // Log de segurança
+            console.log(`🔒 Exclusão de card autorizada:`, {
+                cardId: card.id,
+                cardTitle: card.title,
+                cardOwner: card.userID,
+                requestUser: user.id,
+                isOwner,
+                isAdmin,
+                userEmail: user.email
+            })
 
             // Exclui o card
             await app.db('cards')
@@ -71,6 +89,7 @@ module.exports = app => {
 
             res.status(204).send() // Retorna sucesso após a exclusão
         } catch (msg) {
+            console.error('Erro na exclusão do card:', msg)
             return res.status(400).send(msg) // Retorna erro de validação
         }
     }
@@ -82,6 +101,7 @@ module.exports = app => {
                 'cards.id',
                 'cards.title',
                 'cards.content',
+                'cards.userID', // Adiciona o userID que estava faltando
                 'users.name as userName', // Seleciona o nome do usuário
                 'cards.voting_start',
                 'cards.voting_end'

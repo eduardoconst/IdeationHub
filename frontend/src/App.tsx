@@ -6,16 +6,23 @@ import SignupModal from './components/SignupModal';
 import CreateIdeaModal from './components/CreateIdeaModal';
 import ProfileModal from './components/ProfileModal';
 import AdminCenterModal from './components/AdminCenterModal';
+import IdeaReportModal from './components/IdeaReportModal';
+import ConfirmDialog from './components/ConfirmDialog';
+import ToastContainer from './components/ToastContainer';
 import { AuthProvider } from './context/AuthContext';
 import { useUserPreferences } from './hooks/useUserPreferences';
+import { useNotifications } from './hooks/useNotifications';
 
 function App() {
   const { preferences, toggleDarkMode } = useUserPreferences();
+  const notifications = useNotifications();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showCreateIdeaModal, setShowCreateIdeaModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAdminCenterModal, setShowAdminCenterModal] = useState(false);
+  const [showIdeaReportModal, setShowIdeaReportModal] = useState(false);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const homeRefreshRef = useRef<(() => void) | null>(null);
 
@@ -35,6 +42,13 @@ function App() {
     setShowCreateIdeaModal(false);
     setShowProfileModal(false);
     setShowAdminCenterModal(false);
+    setShowIdeaReportModal(false);
+    setSelectedIdeaId(null);
+  };
+
+  const handleOpenReport = (ideaId: number) => {
+    setSelectedIdeaId(ideaId);
+    setShowIdeaReportModal(true);
   };
 
   return (
@@ -61,6 +75,8 @@ function App() {
               onRefreshRequest={(refreshFn) => {
                 homeRefreshRef.current = refreshFn;
               }}
+              onOpenReport={handleOpenReport}
+              notifications={notifications}
             />
           </main>
 
@@ -112,6 +128,37 @@ function App() {
               }
             }}
           />
+
+          {selectedIdeaId && (
+            <IdeaReportModal
+              isOpen={showIdeaReportModal}
+              onClose={() => {
+                setShowIdeaReportModal(false);
+                setSelectedIdeaId(null);
+              }}
+              ideaId={selectedIdeaId}
+            />
+          )}
+
+          {/* Toast Notifications */}
+          <ToastContainer 
+            toasts={notifications.toasts} 
+            onRemove={notifications.removeToast} 
+          />
+
+          {/* Confirm Dialog */}
+          {notifications.confirmDialog && (
+            <ConfirmDialog
+              isOpen={notifications.confirmDialog.isOpen}
+              title={notifications.confirmDialog.title}
+              message={notifications.confirmDialog.message}
+              confirmText={notifications.confirmDialog.confirmText}
+              cancelText={notifications.confirmDialog.cancelText}
+              type={notifications.confirmDialog.type}
+              onConfirm={notifications.confirmDialog.onConfirm}
+              onCancel={notifications.confirmDialog.onCancel}
+            />
+          )}
         </div>
       </div>
     </AuthProvider>

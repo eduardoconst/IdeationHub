@@ -3,15 +3,19 @@
 import { useState, useEffect } from 'react';
 import { Card, voteCard, getUserVoteForCard, getCardVoteCount, removeUserVote, deleteCard } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
+
+type UseNotificationsReturn = ReturnType<typeof useNotifications>;
 
 interface IdeaProps {
   idea: Card;
   onVoteUpdate?: (cardId: number, newVotes: { yes: number; no: number }) => void;
   onOpenReport?: (ideaId: number) => void;
   onCardDeleted?: (cardId: number) => void;
+  notifications: UseNotificationsReturn;
 }
 
-const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted }: IdeaProps) => {
+const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted, notifications }: IdeaProps) => {
   const { user, isLoggedIn } = useAuth();
   const [isVoting, setIsVoting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -67,7 +71,7 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted }: IdeaProps
 
   const handleVote = async (type: 'yes' | 'no') => {
     if (!isLoggedIn || !user) {
-      alert('Você precisa estar logado para votar! Faça login e tente novamente.');
+      notifications.showWarning('Login necessário', 'Você precisa estar logado para votar! Faça login e tente novamente.');
       return;
     }
 
@@ -115,7 +119,7 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted }: IdeaProps
       
     } catch (error: any) {
       console.error('Erro no handleVote:', error);
-      alert(error.message);
+      notifications.showError('Erro ao votar', error.message);
     } finally {
       setIsVoting(false);
     }
@@ -123,18 +127,25 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted }: IdeaProps
 
   const handleDelete = async () => {
     if (!isLoggedIn || !user) {
-      alert('Você precisa estar logado para excluir uma ideia!');
+      notifications.showWarning('Login necessário', 'Você precisa estar logado para excluir uma ideia!');
       return;
     }
 
     // Verifica se o usuário tem permissão para deletar
     if (!user.admin && idea.userID !== user.id) {
-      alert('Você só pode excluir suas próprias ideias!');
+      notifications.showError('Sem permissão', 'Você só pode excluir suas próprias ideias!');
       return;
     }
 
-    const confirmDelete = window.confirm('Tem certeza que deseja excluir esta ideia? Esta ação não pode ser desfeita.');
-    if (!confirmDelete) return;
+    const confirmed = await notifications.showConfirm({
+      title: 'Excluir Ideia',
+      message: 'Tem certeza que deseja excluir esta ideia? Esta ação não pode ser desfeita.',
+      confirmText: 'Excluir',
+      cancelText: 'Cancelar',
+      type: 'danger'
+    });
+
+    if (!confirmed) return;
 
     setIsDeleting(true);
     
@@ -146,10 +157,10 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted }: IdeaProps
         onCardDeleted(idea.id);
       }
       
-      alert('Ideia excluída com sucesso!');
+      notifications.showSuccess('Sucesso', 'Ideia excluída com sucesso!');
     } catch (error: any) {
       console.error('Erro ao excluir ideia:', error);
-      alert(error.message || 'Erro ao excluir ideia. Tente novamente.');
+      notifications.showError('Erro ao excluir', error.message || 'Erro ao excluir ideia. Tente novamente.');
     } finally {
       setIsDeleting(false);
     }

@@ -50,7 +50,7 @@ module.exports = app => {
     
     app.route('/cards/:id')
         .put(app.config.passport.authenticate(), admin(app.api.card.save)) // requer auth + admin para editar
-        .delete(app.config.passport.authenticate(), admin(app.api.card.remove)) // requer auth + admin para deletar
+        .delete(app.config.passport.authenticate(), app.api.card.remove) // requer auth para deletar (lógica interna verifica permissões)
         .get(app.api.card.getById) // público para visualizar card específico 
 
 // rotas de votos
@@ -166,9 +166,9 @@ module.exports = app => {
         .all(app.config.passport.authenticate()) // autentica o token
         .get(app.api.reports.getUserPersonalReport) // usuário logado pode acessar
 
-    // Relatório específico de uma ideia (só admins)
+    // Relatório específico de uma ideia (admins ou criadores)
     app.route('/api/reports/idea/:id')
         .all(app.config.passport.authenticate()) // autentica o token
-        .get(admin(app.api.reports.getIdeaReport)) // só admin pode acessar
+        .get(app.api.reports.getIdeaReport) // lógica interna verifica se é admin ou criador
 
 };

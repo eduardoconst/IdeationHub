@@ -347,9 +347,14 @@ module.exports = app => {
     }
   };
 
-  // Relatório específico de uma ideia (só admins)
+  // Relatório específico de uma ideia (admins ou criadores)
   const getIdeaReport = async (req, res) => {
     try {
+      // Validação de autenticação
+      if (!req.user || !req.user.id) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
+
       const ideaId = req.params.id;
       
       // Validação do parâmetro ID
@@ -360,9 +365,20 @@ module.exports = app => {
       const parsedIdeaId = parseInt(ideaId);
       console.log(`🔍 Buscando relatório para ideia ID: ${parsedIdeaId}`);
       
+      // Buscar usuário autenticado
+      const currentUser = await knex('users')
+        .select('id', 'admin', 'email')
+        .where('id', req.user.id)
+        .whereNull('deleted_at') // Garantir que o usuário não foi deletado
+        .first();
+
+      if (!currentUser) {
+        return res.status(401).json({ error: 'Usuário não encontrado ou inativo' });
+      }
+      
       // Buscar dados da ideia
       const idea = await knex('cards as c')
-        .select('c.id', 'c.title', 'c.content', 'c.voting_start as created_at', 'u.name as author_name')
+        .select('c.id', 'c.title', 'c.content', 'c.userID', 'c.voting_start as created_at', 'u.name as author_name')
         .join('users as u', 'c.userID', 'u.id')
         .where('c.id', parsedIdeaId)
         .whereNull('u.deleted_at')
@@ -372,6 +388,33 @@ module.exports = app => {
         console.log(`❌ Ideia não encontrada para ID: ${parsedIdeaId}`);
         return res.status(404).json({ error: 'Ideia não encontrada' });
       }
+      
+      // VALIDAÇÃO DE SEGURANÇA: admin ou criador da ideia
+      // Converte ambos para number para garantir comparação correta
+      const isOwner = Number(currentUser.id) === Number(idea.userID)
+      const isAdmin = currentUser.admin === true || currentUser.admin === 1
+        
+      if (!isAdmin && !isOwner) {
+        console.log(`🚫 Acesso negado ao relatório:`, {
+          ideaId: parsedIdeaId,
+          ideaOwner: idea.userID,
+          requestUser: currentUser.id,
+          isOwner,
+          isAdmin
+        })
+        return res.status(403).json({ error: 'Você só pode ver relatórios de suas próprias ideias' });
+      }
+
+      // Log de segurança
+      console.log(`🔒 Acesso ao relatório autorizado:`, {
+        ideaId: parsedIdeaId,
+        ideaTitle: idea.title,
+        ideaOwner: idea.userID,
+        requestUser: currentUser.id,
+        isOwner,
+        isAdmin,
+        userEmail: currentUser.email
+      })
       
       console.log(`✅ Ideia encontrada: ${idea.title}`);
 
