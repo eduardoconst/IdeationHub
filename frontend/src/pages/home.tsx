@@ -10,26 +10,24 @@
  * 
  * Principais funções:
  * - loadCards(): Busca cards do backend
- * - handleVote():            )}
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default Home;atualiza no backend
- * - Sistema de filtros: 'all', 'trending', 'recent'
+ * - handleVoteUpdate(): Atualiza votos localmente (sem refresh)
+ * - Sistema de filtros: 'all', 'active', 'ended', 'recent'
  * - Sistema de ordenação: por votos, tempo ou recência
  * - Cálculo dinâmico de estatísticas vindas do banco
+ * 
+ * Estratégia de Refresh Otimizada:
+ * - ❌ Removido auto-refresh por tempo (evita sobrecarga no backend)
+ * - ✅ Refresh inteligente quando usuário volta à aba após 5min+ inativo
+ * - ✅ Refresh automático ao fazer login/logout
+ * - ✅ Updates locais para votos (sem consultar backend)
+ * - ✅ Refresh manual apenas em casos específicos (erros, admin)
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import IdeaCard from '../components/IdeaCard';
 import { getCards, Card, getTotalPositiveVotes, getTotalUsers } from '../services/cardService';
-// import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
-import { useUserPreferences } from '../hooks/useUserPreferences';
 import { useNotifications } from '../hooks/useNotifications';
 
 type UseNotificationsReturn = ReturnType<typeof useNotifications>;
@@ -46,17 +44,16 @@ interface HomeProps {
 }
 
 const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, onOpenReport, notifications }: HomeProps) => {
-  // const { isLoggedIn } = useAuth();
+  const { isLoggedIn } = useAuth();
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
   const [totalUsers, setTotalUsers] = useState<number>(0);
-  const { preferences } = useUserPreferences();
 
   
   // Usa localStorage para persistir filtros e ordenação
-  const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent' | 'active' | 'ended'>('homeFilter', 'all');
+  const [filter, setFilter] = useLocalStorage<'all' | 'trending' | 'recent' | 'active' | 'ended'>('homeFilter', 'active');
   const [sortBy, setSortBy] = useLocalStorage<'votes' | 'time' | 'recent' | 'alphabetical'>('homeSortBy', 'recent');
 
   const loadCards = useCallback(async () => {
@@ -113,17 +110,40 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
     }
   }, [onRefreshRequest, loadCards]);
 
-  // Auto-refresh dos cards conforme preferência do usuário
+  // Refresh inteligente baseado em visibilidade da página
   useEffect(() => {
-    if (!preferences.autoRefresh) return;
+    let lastRefreshTime = Date.now();
+    const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutos
 
-    const interval = setInterval(() => {
-      console.log('🔁 Auto-refresh ativado - Atualizando cards...');
+    const handleVisibilityChange = () => {
+      if (!document.hidden && Date.now() - lastRefreshTime > REFRESH_INTERVAL) {
+        console.log('🔄 Página voltou a ficar visível após período inativo - Atualizando...');
+        loadCards();
+        lastRefreshTime = Date.now();
+      }
+    };
+
+    // Refresh quando usuário faz login/logout
+    const handleAuthChange = () => {
+      console.log('� Estado de autenticação mudou - Atualizando...');
       loadCards();
-    }, 35000); // 35 segundos
+      lastRefreshTime = Date.now();
+    };
 
-    return () => clearInterval(interval); // Limpa ao desmontar
-  }, [preferences.autoRefresh, loadCards]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Escuta mudanças no localStorage do auth (login/logout)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'auth_token') {
+        handleAuthChange();
+      }
+    });
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('storage', handleAuthChange);
+    };
+  }, [loadCards]);
 
   const handleVoteUpdate = (cardId: number, newVotes: { yes: number; no: number }) => {
     setIdeas(prevIdeas => {
@@ -159,6 +179,12 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
     });
   };
 
+  // Função para refresh completo quando necessário (apenas em casos específicos)
+  const forceRefresh = useCallback(() => {
+    console.log('🔄 Refresh forçado solicitado...');
+    loadCards();
+  }, [loadCards]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -184,7 +210,7 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
           </h3>
           <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
           <button
-            onClick={loadCards}
+            onClick={forceRefresh}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Tentar novamente
@@ -327,7 +353,6 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
             { key: 'all', label: 'Todas' },
             { key: 'active', label: 'Ativas' },
             { key: 'ended', label: 'Encerradas' },
-            { key: 'trending', label: 'Em Alta' },
             { key: 'recent', label: 'Recentes' }
           ].map(item => (
             <button
@@ -360,21 +385,51 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
       </div>
 
       {/* Ideas List */}
-      <div className="space-y-4">
-        {sortedIdeas.map((idea) => (
-          <IdeaCard 
-            key={idea.id} 
-            idea={idea} 
-            onVoteUpdate={handleVoteUpdate}
-            onOpenReport={handleOpenReport}
-            onCardDeleted={handleCardDeleted}
-            notifications={notifications}
-          />
-        ))}
-      </div>
+      {isLoggedIn ? (
+        <div className="space-y-4">
+          {sortedIdeas.map((idea) => (
+            <IdeaCard 
+              key={idea.id} 
+              idea={idea} 
+              onVoteUpdate={handleVoteUpdate}
+              onOpenReport={handleOpenReport}
+              onCardDeleted={handleCardDeleted}
+              notifications={notifications}
+            />
+          ))}
+        </div>
+      ) : (
+        /* Tela de login para usuários não logados */
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 max-w-xs mx-4">
+            <div className="mb-4">
+              <svg className="w-12 h-12 text-blue-600 dark:text-blue-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                🔒 Conteúdo Protegido
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                Faça login para ver e interagir com as ideias da comunidade
+              </p>
+            </div>
+            
+            <button
+              onClick={onOpenLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200"
+            >
+              🚀 Fazer Login
+            </button>
+            
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+              Junte-se à nossa comunidade de inovadores!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Empty state */}
-      {sortedIdeas.length === 0 && (
+      {isLoggedIn && sortedIdeas.length === 0 && (
         <div className="text-center py-12">
           <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -389,11 +444,9 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
                 ? 'Não há ideias com votação ativa no momento.'
                 : filter === 'ended'
                   ? 'Não há ideias com votação encerrada.'
-                  : filter === 'trending'
-                    ? 'Não há ideias em alta no momento.'
-                    : filter === 'recent'
-                      ? 'Não há ideias recentes.'
-                      : 'Que tal criar uma nova ideia para começar?'
+                  : filter === 'recent'
+                    ? 'Não há ideias recentes.'
+                    : 'Que tal criar uma nova ideia para começar?'
             }
           </p>
           {searchTerm && (
