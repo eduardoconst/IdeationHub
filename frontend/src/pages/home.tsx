@@ -30,9 +30,10 @@ interface HomeProps {
   onOpenLogin?: () => void;
   searchTerm?: string;
   onSearchChange?: (term: string) => void;
+  onRefreshRequest?: (refreshFn: () => void) => void;
 }
 
-const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
+const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest }: HomeProps) => {
   // const { isLoggedIn } = useAuth();
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -95,6 +96,13 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
     loadCards();
   }, [loadCards]);
 
+  // Registra a função de refresh com o componente pai
+  useEffect(() => {
+    if (onRefreshRequest) {
+      onRefreshRequest(loadCards);
+    }
+  }, [onRefreshRequest, loadCards]);
+
   // Auto-refresh dos cards conforme preferência do usuário
   useEffect(() => {
     if (!preferences.autoRefresh) return;
@@ -131,6 +139,18 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
   const handleCloseReport = () => {
     setIsIdeaReportModalOpen(false);
     setSelectedIdeaId(null);
+  };
+
+  const handleCardDeleted = (cardId: number) => {
+    setIdeas(prevIdeas => {
+      const updatedIdeas = prevIdeas.filter(idea => idea.id !== cardId);
+      
+      // Recalcula total de votos positivos localmente
+      const newTotalPositiveVotes = updatedIdeas.reduce((acc, idea) => acc + (idea.votes?.yes || 0), 0);
+      setTotalPositiveVotes(newTotalPositiveVotes);
+      
+      return updatedIdeas;
+    });
   };
 
   // Loading state
@@ -341,6 +361,7 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange }: HomeProps) => {
             idea={idea} 
             onVoteUpdate={handleVoteUpdate}
             onOpenReport={handleOpenReport}
+            onCardDeleted={handleCardDeleted}
           />
         ))}
       </div>

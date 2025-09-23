@@ -1,18 +1,20 @@
 
 
 import { useState, useEffect } from 'react';
-import { Card, voteCard, getUserVoteForCard, getCardVoteCount, removeUserVote } from '../services/cardService';
+import { Card, voteCard, getUserVoteForCard, getCardVoteCount, removeUserVote, deleteCard } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
 
 interface IdeaProps {
   idea: Card;
   onVoteUpdate?: (cardId: number, newVotes: { yes: number; no: number }) => void;
   onOpenReport?: (ideaId: number) => void;
+  onCardDeleted?: (cardId: number) => void;
 }
 
-const IdeaCard = ({ idea, onVoteUpdate, onOpenReport }: IdeaProps) => {
+const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted }: IdeaProps) => {
   const { user, isLoggedIn } = useAuth();
   const [isVoting, setIsVoting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [userVote, setUserVote] = useState<boolean | null>(null);
   const [voteCount, setVoteCount] = useState<{ yes: number; no: number }>({
     yes: idea.votes?.yes || 0,
@@ -116,6 +118,40 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport }: IdeaProps) => {
       alert(error.message);
     } finally {
       setIsVoting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!isLoggedIn || !user) {
+      alert('Você precisa estar logado para excluir uma ideia!');
+      return;
+    }
+
+    // Verifica se o usuário tem permissão para deletar
+    if (!user.admin && idea.userID !== user.id) {
+      alert('Você só pode excluir suas próprias ideias!');
+      return;
+    }
+
+    const confirmDelete = window.confirm('Tem certeza que deseja excluir esta ideia? Esta ação não pode ser desfeita.');
+    if (!confirmDelete) return;
+
+    setIsDeleting(true);
+    
+    try {
+      await deleteCard(idea.id);
+      
+      // Notifica o componente pai sobre a exclusão
+      if (onCardDeleted) {
+        onCardDeleted(idea.id);
+      }
+      
+      alert('Ideia excluída com sucesso!');
+    } catch (error: any) {
+      console.error('Erro ao excluir ideia:', error);
+      alert(error.message || 'Erro ao excluir ideia. Tente novamente.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -233,6 +269,27 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport }: IdeaProps) => {
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
+            </button>
+          )}
+
+          {/* Delete Button - Apenas para admins ou criadores do card */}
+          {isLoggedIn && (user?.admin || idea.userID === user?.id) && (
+            <button
+              onClick={handleDelete}
+              disabled={isDeleting}
+              title="Excluir ideia"
+              className="flex items-center space-x-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isDeleting ? (
+                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H9a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              )}
             </button>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import LoginModal from './components/LoginModal';
@@ -17,6 +17,7 @@ function App() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAdminCenterModal, setShowAdminCenterModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const homeRefreshRef = useRef<(() => void) | null>(null);
 
   const handleSwitchToSignup = () => {
     setShowLoginModal(false);
@@ -57,6 +58,9 @@ function App() {
               onOpenLogin={() => setShowLoginModal(true)} 
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
+              onRefreshRequest={(refreshFn) => {
+                homeRefreshRef.current = refreshFn;
+              }}
             />
           </main>
 
@@ -78,10 +82,14 @@ function App() {
           
           <CreateIdeaModal 
             isOpen={showCreateIdeaModal}
-            onClose={closeAllModals}
+            onClose={() => setShowCreateIdeaModal(false)}
             onSubmit={() => {
-              // Recarregar página para mostrar nova ideia
-              window.location.reload();
+              // Fecha o modal após criação bem-sucedida
+              setShowCreateIdeaModal(false);
+              // Atualiza apenas os dados da página sem fechar outros popups
+              if (homeRefreshRef.current) {
+                homeRefreshRef.current();
+              }
             }}
           />
 
@@ -97,7 +105,10 @@ function App() {
               console.log('Ação administrativa:', action, data);
               // Aqui você pode implementar as ações específicas
               if (action === 'refresh_data') {
-                window.location.reload();
+                // Atualiza apenas os dados da página sem fechar outros popups
+                if (homeRefreshRef.current) {
+                  homeRefreshRef.current();
+                }
               }
             }}
           />
