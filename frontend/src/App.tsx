@@ -139,26 +139,6 @@ function App() {
               ideaId={selectedIdeaId}
             />
           )}
-
-          {/* Toast Notifications */}
-          <ToastContainer 
-            toasts={notifications.toasts} 
-            onRemove={notifications.removeToast} 
-          />
-
-          {/* Confirm Dialog */}
-          {notifications.confirmDialog && (
-            <ConfirmDialog
-              isOpen={notifications.confirmDialog.isOpen}
-              title={notifications.confirmDialog.title}
-              message={notifications.confirmDialog.message}
-              confirmText={notifications.confirmDialog.confirmText}
-              cancelText={notifications.confirmDialog.cancelText}
-              type={notifications.confirmDialog.type}
-              onConfirm={notifications.confirmDialog.onConfirm}
-              onCancel={notifications.confirmDialog.onCancel}
-            />
-          )}
         </div>
       </div>
     </AuthProvider>

@@ -13,7 +13,7 @@
  * - handleVoteUpdate(): Atualiza votos localmente (sem refresh)
  * - Sistema de filtros: 'all', 'active', 'ended', 'recent'
  * - Sistema de ordenação: por votos, tempo ou recência
- * - Cálculo dinâmico de estatísticas vindas do banco
+ * - Cálculo dinâmico de votos totais (positivos + negativos)
  * 
  * Estratégia de Refresh Otimizada:
  * - ❌ Removido auto-refresh por tempo (evita sobrecarga no backend)
@@ -25,7 +25,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import IdeaCard from '../components/IdeaCard';
-import { getCards, Card, getTotalPositiveVotes, getTotalUsers } from '../services/cardService';
+import { getCards, Card, getTotalUsers, getTotalVotes } from '../services/cardService';
 import { useAuth } from '../context/AuthContext';
 import useLocalStorage from '../hooks/useLocalStorage';
 import { useNotifications } from '../hooks/useNotifications';
@@ -48,7 +48,7 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
   const [ideas, setIdeas] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [totalPositiveVotes, setTotalPositiveVotes] = useState<number>(0);
+  const [totalVotes, setTotalVotes] = useState<number>(0);
   const [totalUsers, setTotalUsers] = useState<number>(0);
 
   
@@ -63,25 +63,20 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
       
       console.log('🔄 Carregando dados do backend...');
       
-      // Carrega cards, total de votos positivos e total de usuários em paralelo
-      const [cardsData, totalVotes, usersCount] = await Promise.all([
+      // Carrega cards, total de votos e total de usuários em paralelo
+      const [cardsData, totalVotesFromDB, usersCount] = await Promise.all([
         getCards(),
-        getTotalPositiveVotes(),
+        getTotalVotes(),
         getTotalUsers()
       ]);
       
       console.log('✅ Cards carregados:', cardsData);
-      console.log('✅ Total votos positivos:', totalVotes);
+      console.log('✅ Total votos do banco:', totalVotesFromDB);
       console.log('✅ Total usuários:', usersCount);
       
-      // Para cada card, vamos simular os votos (até implementarmos a contagem real)
-      const cardsWithVotes = cardsData.map(card => ({
-        ...card,
-        votes: card.votes || { yes: 0, no: 0 }
-      }));
-      
-      setIdeas(cardsWithVotes);
-      setTotalPositiveVotes(totalVotes);
+      // Cards já vêm com votos do backend, não precisa simular
+      setIdeas(cardsData);
+      setTotalVotes(totalVotesFromDB);
       setTotalUsers(usersCount);
     } catch (err: any) {
       console.error('❌ Erro ao carregar dados:', err);
@@ -153,9 +148,13 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
           : idea
       );
       
-      // Recalcula total de votos positivos localmente
-      const newTotalPositiveVotes = updatedIdeas.reduce((acc, idea) => acc + (idea.votes?.yes || 0), 0);
-      setTotalPositiveVotes(newTotalPositiveVotes);
+      // Recalcula total de votos (positivos + negativos) localmente
+      const newTotalVotes = updatedIdeas.reduce((acc, idea) => {
+        const yesVotes = idea.votes?.yes || 0;
+        const noVotes = idea.votes?.no || 0;
+        return acc + yesVotes + noVotes;
+      }, 0);
+      setTotalVotes(newTotalVotes);
       
       return updatedIdeas;
     });
@@ -171,9 +170,13 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
     setIdeas(prevIdeas => {
       const updatedIdeas = prevIdeas.filter(idea => idea.id !== cardId);
       
-      // Recalcula total de votos positivos localmente
-      const newTotalPositiveVotes = updatedIdeas.reduce((acc, idea) => acc + (idea.votes?.yes || 0), 0);
-      setTotalPositiveVotes(newTotalPositiveVotes);
+      // Recalcula total de votos (positivos + negativos) localmente
+      const newTotalVotes = updatedIdeas.reduce((acc, idea) => {
+        const yesVotes = idea.votes?.yes || 0;
+        const noVotes = idea.votes?.no || 0;
+        return acc + yesVotes + noVotes;
+      }, 0);
+      setTotalVotes(newTotalVotes);
       
       return updatedIdeas;
     });
@@ -317,13 +320,13 @@ const Home = ({ onOpenLogin, searchTerm = '', onSearchChange, onRefreshRequest, 
           <div className="flex items-center">
             <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
               <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5 5 5M7 21l5-5 5 5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Votos Positivos</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Votos Totais</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {totalPositiveVotes}
+                {totalVotes}
               </p>
             </div>
           </div>

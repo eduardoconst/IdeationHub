@@ -156,6 +156,32 @@ export const getTotalPositiveVotes = async (): Promise<number> => {
 };
 
 /**
+ * Busca o total de votos (positivos + negativos) de todos os cards
+ */
+export const getTotalVotes = async (): Promise<number> => {
+  try {
+    const response = await api.get('/votes/total');
+    return response.data.total || 0;
+  } catch (error: any) {
+    console.error('Erro ao buscar total de votos do endpoint, usando fallback:', error);
+    // Fallback: se não existe endpoint, calcula localmente com dados dos cards
+    try {
+      const cards = await getCards();
+      const total = cards.reduce((acc, card) => {
+        const yesVotes = card.votes?.yes || 0;
+        const noVotes = card.votes?.no || 0;
+        return acc + yesVotes + noVotes;
+      }, 0);
+      console.log('✅ Total de votos calculado via fallback:', total);
+      return total;
+    } catch (fallbackError) {
+      console.error('Erro no fallback também:', fallbackError);
+      return 0;
+    }
+  }
+};
+
+/**
  * Remove o voto de um usuário em um card específico
  */
 export const removeUserVote = async (cardId: number, userId: number): Promise<void> => {

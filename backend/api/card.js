@@ -94,20 +94,44 @@ module.exports = app => {
         }
     }
 
-    const get = (req, res) => { // Função que busca os cards
-        app.db('cards')
-            .join('users', 'users.id', '=', 'cards.userID') // Faz o join com a tabela de usuários
-            .select(
-                'cards.id',
-                'cards.title',
-                'cards.content',
-                'cards.userID', // Adiciona o userID que estava faltando
-                'users.name as userName', // Seleciona o nome do usuário
-                'cards.voting_start',
-                'cards.voting_end'
-            )
-            .then(cards => res.json(cards))
-            .catch(err => res.status(500).send(err))
+    const get = async (req, res) => { // Função que busca os cards
+        try {
+            // Busca os cards
+            const cards = await app.db('cards')
+                .join('users', 'users.id', '=', 'cards.userID') // Faz o join com a tabela de usuários
+                .select(
+                    'cards.id',
+                    'cards.title',
+                    'cards.content',
+                    'cards.userID', // Adiciona o userID que estava faltando
+                    'users.name as userName', // Seleciona o nome do usuário
+                    'cards.voting_start',
+                    'cards.voting_end'
+                );
+
+            // Para cada card, busca os votos
+            const cardsWithVotes = await Promise.all(cards.map(async (card) => {
+                const votes = await app.db('votes')
+                    .where({ cardID: card.id })
+                    .select('vote');
+                
+                const yesVotes = votes.filter(v => v.vote === true).length;
+                const noVotes = votes.filter(v => v.vote === false).length;
+                
+                return {
+                    ...card,
+                    votes: {
+                        yes: yesVotes,
+                        no: noVotes
+                    }
+                };
+            }));
+
+            res.json(cardsWithVotes);
+        } catch (err) {
+            console.error('Erro ao buscar cards com votos:', err);
+            res.status(500).send(err);
+        }
     }
 
     const getById = (req, res) => { // Função que busca um card por id

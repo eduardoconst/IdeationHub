@@ -82,6 +82,10 @@ module.exports = app => {
     app.route('/votes/total-positive')
         .get(app.api.vote.getTotalPositiveVotes) // Público para mostrar estatísticas
 
+    // Rota para buscar total de todos os votos (positivos + negativos)
+    app.route('/votes/total')
+        .get(app.api.vote.getTotalVotes) // Público para mostrar estatísticas
+
     // Rota de debug (temporária)
     app.route('/votes/debug/:cardId/:userId')
         .get(app.api.vote.debugVoteData) // Debug dos dados de voto

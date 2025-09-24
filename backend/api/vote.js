@@ -273,6 +273,20 @@ module.exports = app => {
         }
     };
 
+    // Busca total de todos os votos (positivos + negativos)
+    const getTotalVotes = async (req, res) => {
+        try {
+            const result = await app.db('votes')
+                .count('* as total');
+            
+            const total = parseInt(result[0].total) || 0;
+            res.json({ total });
+        } catch (error) {
+            console.error('Erro ao buscar total de votos:', error);
+            res.status(500).send('Erro interno do servidor');
+        }
+    };
+
     // Remove voto de um usuário em um card específico
     const removeVote = async (req, res) => {
         const trx = await app.db.transaction();
@@ -354,6 +368,6 @@ module.exports = app => {
         }
     };
 
-    return { save, get, getGroupedByCard, getVisibleVotes, getUserVoteForCard, getCardVoteCount, getTotalPositiveVotes, removeVote, debugVoteData };
+    return { save, get, getGroupedByCard, getVisibleVotes, getUserVoteForCard, getCardVoteCount, getTotalPositiveVotes, getTotalVotes, removeVote, debugVoteData };
 };
 
