@@ -8,7 +8,7 @@
 # Node dependencies
 /backend/node_modules/
 
-/backend/.env
+*/backend/.env
 /backend/.DS_Store
 
 # ─────────────────────────────
@@ -39,4 +39,4 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Env files
-.env
+*.env

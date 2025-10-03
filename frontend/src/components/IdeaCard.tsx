@@ -126,17 +126,24 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted, notificatio
   };
 
   const handleDelete = async () => {
+    console.log('🗑️ handleDelete chamado');
+    console.log('👤 Usuário:', { isLoggedIn, user: user ? { id: user.id, admin: user.admin } : null });
+    console.log('📝 Ideia:', { id: idea.id, userID: idea.userID, title: idea.title });
+
     if (!isLoggedIn || !user) {
+      console.log('❌ Usuário não logado');
       notifications.showWarning('Login necessário', 'Você precisa estar logado para excluir uma ideia!');
       return;
     }
 
     // Verifica se o usuário tem permissão para deletar
     if (!user.admin && idea.userID !== user.id) {
+      console.log('❌ Sem permissão - userID:', user.id, 'ideaUserID:', idea.userID, 'isAdmin:', user.admin);
       notifications.showError('Sem permissão', 'Você só pode excluir suas próprias ideias!');
       return;
     }
 
+    console.log('✅ Usuário tem permissão, mostrando confirmação...');
     const confirmed = await notifications.showConfirm({
       title: 'Excluir Ideia',
       message: 'Tem certeza que deseja excluir esta ideia? Esta ação não pode ser desfeita.',
@@ -145,24 +152,29 @@ const IdeaCard = ({ idea, onVoteUpdate, onOpenReport, onCardDeleted, notificatio
       type: 'danger'
     });
 
+    console.log('🤔 Confirmação:', confirmed);
     if (!confirmed) return;
 
     setIsDeleting(true);
+    console.log('⏳ Iniciando exclusão...');
     
     try {
       await deleteCard(idea.id);
+      console.log('✅ Card deletado com sucesso');
       
       // Notifica o componente pai sobre a exclusão
       if (onCardDeleted) {
+        console.log('📢 Notificando componente pai');
         onCardDeleted(idea.id);
       }
       
       notifications.showSuccess('Sucesso', 'Ideia excluída com sucesso!');
     } catch (error: any) {
-      console.error('Erro ao excluir ideia:', error);
+      console.error('❌ Erro ao excluir ideia:', error);
       notifications.showError('Erro ao excluir', error.message || 'Erro ao excluir ideia. Tente novamente.');
     } finally {
       setIsDeleting(false);
+      console.log('🏁 Exclusão finalizada');
     }
   };
 
