@@ -298,7 +298,7 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](LICENSE) par
 
 - 🌐 GitHub: [@eduardoconst](https://github.com/eduardoconst)
 - 📧 Email: [eduardoconstantino2003@gmail.com](mailto:eduardoconstantino2003@gmail.com)
-- 💼 LinkedIn: [Eduardo Constantino](https://linkedin.com/in/eduardo-constantino)
+- 💼 LinkedIn: [Eduardo Constantino](https://linkedin.com/in/eduardoferreiraconstantino)
 
 ---
 
